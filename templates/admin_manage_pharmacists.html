@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Pharmacists - Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        .badge-active { background-color: #198754; }
+        .badge-inactive { background-color: #dc3545; }
+        .nav-gradient { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .action-btn { width: 36px; height: 36px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark nav-gradient">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('admin_dashboard') }}">
+                <i class="bi bi-hospital"></i> All Saint Medical Center
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text me-3">
+                    <i class="bi bi-person-circle"></i> {{ admin_name }}
+                </span>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-house"></i> Dashboard
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3><i class="bi bi-capsule"></i> Pharmacist Management</h3>
+                        <p class="text-muted mb-0">Manage pharmacy staff accounts</p>
+                    </div>
+                    <div>
+                        <a href="{{ url_for('admin_create_pharmacist') }}" class="btn btn-primary">
+                            <i class="bi bi-person-plus"></i> Add New Pharmacist
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Pharmacists Table -->
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Full Name</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pharmacist in pharmacists %}
+                            <tr>
+                                <td><strong>{{ pharmacist[1] }}</strong></td>
+                                <td>{{ pharmacist[2] }}</td>
+                                <td>
+                                    {% if pharmacist[3] %}
+                                        <span class="badge badge-active">Active</span>
+                                    {% else %}
+                                        <span class="badge badge-inactive">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ pharmacist[4].strftime('%Y-%m-%d') }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        {% if pharmacist[3] %}
+                                            <button class="btn btn-outline-danger action-btn" 
+                                                    onclick="toggleStatus({{ pharmacist[0] }}, 'pharmacist', false)"
+                                                    title="Deactivate">
+                                                <i class="bi bi-person-x"></i>
+                                            </button>
+                                        {% else %}
+                                            <button class="btn btn-outline-success action-btn" 
+                                                    onclick="toggleStatus({{ pharmacist[0] }}, 'pharmacist', true)"
+                                                    title="Activate">
+                                                <i class="bi bi-person-check"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    <i class="bi bi-people display-6 mb-3"></i>
+                                    <h5>No Pharmacist Users Found</h5>
+                                    <p>Create your first pharmacist user to get started</p>
+                                    <a href="{{ url_for('admin_create_pharmacist') }}" class="btn btn-primary">
+                                        <i class="bi bi-person-plus"></i> Create Pharmacist User
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card border-primary">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Total Pharmacists</h6>
+                        <h3>{{ pharmacists|length }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-success">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Active</h6>
+                        <h3>{{ pharmacists|selectattr('3')|list|length }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card border-warning">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Inactive</h6>
+                        <h3>{{ pharmacists|rejectattr('3')|list|length }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleStatus(userId, userType, activate) {
+            if (confirm(activate ? 
+                'Activate this pharmacist?' : 
+                'Deactivate this pharmacist?')) {
+                
+                fetch(`/admin/users/toggle-status/${userType}/${userId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred.');
+                });
+            }
+        }
+    </script>
+</body>
+</html>

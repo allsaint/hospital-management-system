@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Admins - Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        .table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        .badge-active {
+            background-color: #198754;
+        }
+        .badge-inactive {
+            background-color: #dc3545;
+        }
+        .badge-super {
+            background-color: #6f42c1;
+        }
+        .action-btn {
+            width: 36px;
+            height: 36px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .search-box {
+            max-width: 300px;
+        }
+        .nav-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark nav-gradient">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('admin_dashboard') }}">
+                <i class="bi bi-hospital"></i> All Saint Medical Center
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text me-3">
+                    <i class="bi bi-person-circle"></i> {{ admin_name }}
+                </span>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-house"></i> Dashboard
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3><i class="bi bi-shield-check"></i> Admin User Management</h3>
+                        <p class="text-muted mb-0">Manage system administrators and their permissions</p>
+                    </div>
+                    <div>
+                        <a href="{{ url_for('admin_create_admin') }}" class="btn btn-primary">
+                            <i class="bi bi-person-plus"></i> Add New Admin
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Search and Filter -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="input-group search-box">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" placeholder="Search admins..." id="searchInput">
+                </div>
+            </div>
+            <div class="col-md-6 text-end">
+                <div class="btn-group">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" 
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-filter"></i> Filter by Status
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" onclick="filterTable('all')">All Users</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="filterTable('active')">Active Only</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="filterTable('inactive')">Inactive Only</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="filterTable('super')">Super Admins</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admins Table -->
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="adminsTable">
+                        <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Full Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Last Login</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for admin in admins %}
+                            <tr data-status="{{ 'active' if admin[6] else 'inactive' }}" 
+                                data-role="{{ 'super' if admin[5] else 'regular' }}">
+                                <td>
+                                    <strong>{{ admin[1] }}</strong>
+                                    {% if admin[5] %}
+                                        <span class="badge badge-super bg-purple ms-1">Super</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ admin[2] }}</td>
+                                <td>{{ admin[3] or 'N/A' }}</td>
+                                <td>{{ admin[4] }}</td>
+                                <td>
+                                    {% if admin[6] %}
+                                        <span class="badge badge-active">Active</span>
+                                    {% else %}
+                                        <span class="badge badge-inactive">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if admin[8] %}
+                                        {{ admin[8].strftime('%Y-%m-%d %H:%M') }}
+                                    {% else %}
+                                        <span class="text-muted">Never</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ admin[7].strftime('%Y-%m-%d') }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        {% if admin[6] %}
+                                            <button class="btn btn-outline-danger action-btn" 
+                                                    onclick="toggleStatus({{ admin[0] }}, 'admin', false)"
+                                                    title="Deactivate">
+                                                <i class="bi bi-person-x"></i>
+                                            </button>
+                                        {% else %}
+                                            <button class="btn btn-outline-success action-btn" 
+                                                    onclick="toggleStatus({{ admin[0] }}, 'admin', true)"
+                                                    title="Activate">
+                                                <i class="bi bi-person-check"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="8" class="text-center text-muted py-4">
+                                    <i class="bi bi-people display-6 mb-3"></i>
+                                    <h5>No Admin Users Found</h5>
+                                    <p>Create your first admin user to get started</p>
+                                    <a href="{{ url_for('admin_create_admin') }}" class="btn btn-primary">
+                                        <i class="bi bi-person-plus"></i> Create Admin User
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="row mt-4">
+            <div class="col-md-3">
+                <div class="card border-primary">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Total Admins</h6>
+                        <h3>{{ admins|length }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-success">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Active</h6>
+                        <h3>{{ admins|selectattr('6')|list|length }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-warning">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Inactive</h6>
+                        <h3>{{ admins|rejectattr('6')|list|length }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-purple">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Super Admins</h6>
+                        <h3>{{ admins|selectattr('5')|list|length }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('keyup', function() {
+            const searchTerm = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#adminsTable tbody tr');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        });
+
+        // Filter functionality
+        function filterTable(filter) {
+            const rows = document.querySelectorAll('#adminsTable tbody tr');
+            
+            rows.forEach(row => {
+                const status = row.getAttribute('data-status');
+                const role = row.getAttribute('data-role');
+                
+                switch(filter) {
+                    case 'active':
+                        row.style.display = status === 'active' ? '' : 'none';
+                        break;
+                    case 'inactive':
+                        row.style.display = status === 'inactive' ? '' : 'none';
+                        break;
+                    case 'super':
+                        row.style.display = role === 'super' ? '' : 'none';
+                        break;
+                    default:
+                        row.style.display = '';
+                }
+            });
+        }
+
+        // Toggle user status
+        function toggleStatus(userId, userType, activate) {
+            if (confirm(activate ? 
+                'Are you sure you want to activate this user?' : 
+                'Are you sure you want to deactivate this user?')) {
+                
+                fetch(`/admin/users/toggle-status/${userType}/${userId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                        location.reload();
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred. Please try again.');
+                });
+            }
+        }
+    </script>
+</body>
+</html>

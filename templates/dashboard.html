@@ -21,7 +21,7 @@
 <header class="header">
     <div class="container text-center">
         <h1>{{ hospital_name }}</h1>
-        <p>Health for All</p>
+        <!-- <p>Health for All</p> -->
     </div>
 </header>
 
@@ -29,61 +29,135 @@
 <div class="container dashboard-container">
     <div class="row g-4 justify-content-center">
 
-        {% for module in modules %}
+        <!-- Admin Card -->
         <div class="col-12 col-sm-6 col-md-4 col-lg-4">
-
-            {% if 'pharmacy' in module.lower() %}
-                <a href="{{ url_for('pharmacy_login') }}"
-                   class="text-decoration-none text-reset">
-
-            {% elif 'billing' in module.lower() %}
-                <a href="{{ url_for('billing_login') }}"
-                   class="text-decoration-none text-reset">
-
-            {% elif 'human' in module.lower() %}
-                <a href="{{ url_for('hr_login') }}"
-                   class="text-decoration-none text-reset">
-
-            {% else %}
-                <a href="{{ url_for('module_placeholder',
-                        module_name=module.replace(' ', '_').lower()) }}"
-                   class="text-decoration-none text-reset">
-            {% endif %}
-
+            <a href="{{ url_for('admin_login') }}"
+               class="text-decoration-none text-reset">
                 <div class="card module-card h-100">
                     <div class="card-body text-center">
-
-                        {% if 'admin' in module.lower() %}
-                            <i class="bi bi-shield-lock card-icon"></i>
-                        {% elif 'patient' in module.lower() %}
-                            <i class="bi bi-people card-icon"></i>
-                        {% elif 'clinical' in module.lower() %}
-                            <i class="bi bi-heart-pulse card-icon"></i>
-                        {% elif 'pharmacy' in module.lower() %}
-                            <i class="bi bi-capsule card-icon"></i>
-                        {% elif 'laboratory' in module.lower() %}
-                            <i class="bi bi-vial card-icon"></i>
-                        {% elif 'radiology' in module.lower() %}
-                            <i class="bi bi-radioactive card-icon"></i>
-                        {% elif 'billing' in module.lower() %}
-                            <i class="bi bi-receipt card-icon"></i>
-                        {% elif 'human' in module.lower() %}
-                            <i class="bi bi-person-badge card-icon"></i>
-                        {% elif 'management' in module.lower() %}
-                            <i class="bi bi-bar-chart-line card-icon"></i>
-                        {% else %}
-                            <i class="bi bi-grid-3x3-gap card-icon"></i>
-                        {% endif %}
-
-                        <h5 class="card-title mt-2">{{ module }}</h5>
-                        <p class="card-text">Access {{ module }}</p>
-
+                        <i class="bi bi-shield-lock card-icon"></i>
+                        <h5 class="card-title mt-2">Admin</h5>
+                        <p class="card-text">Access Admin</p>
                     </div>
                 </div>
-
             </a>
         </div>
-        {% endfor %}
+
+        <!-- Billing & Revenue Card -->
+        <div class="col-12 col-sm-6 col-md-4 col-lg-4">
+            <a href="{{ url_for('billing_login') }}"
+               class="text-decoration-none text-reset">
+                <div class="card module-card h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-receipt card-icon"></i>
+                        <h5 class="card-title mt-2">Billing & Revenue</h5>
+                        <p class="card-text">Access Billing & Revenue</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Pharmacy Card -->
+        <div class="col-12 col-sm-6 col-md-4 col-lg-4">
+            <a href="{{ url_for('pharmacy_login') }}"
+               class="text-decoration-none text-reset">
+                <div class="card module-card h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-capsule card-icon"></i>
+                        <h5 class="card-title mt-2">Pharmacy</h5>
+                        <p class="card-text">Access Pharmacy</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        {#
+        <!-- Commented out modules - keeping for future reference -->
+        
+        <!-- Patient Card -->
+        <div class="col-12 col-sm-6 col-md-4 col-lg-4">
+            <a href="{{ url_for('module_placeholder', module_name='patient') }}"
+               class="text-decoration-none text-reset">
+                <div class="card module-card h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-people card-icon"></i>
+                        <h5 class="card-title mt-2">Patient</h5>
+                        <p class="card-text">Access Patient</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Clinical Card -->
+        <div class="col-12 col-sm-6 col-md-4 col-lg-4">
+            <a href="{{ url_for('module_placeholder', module_name='clinical') }}"
+               class="text-decoration-none text-reset">
+                <div class="card module-card h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-heart-pulse card-icon"></i>
+                        <h5 class="card-title mt-2">Clinical</h5>
+                        <p class="card-text">Access Clinical</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Laboratory Card -->
+        <div class="col-12 col-sm-6 col-md-4 col-lg-4">
+            <a href="{{ url_for('module_placeholder', module_name='laboratory') }}"
+               class="text-decoration-none text-reset">
+                <div class="card module-card h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-vial card-icon"></i>
+                        <h5 class="card-title mt-2">Laboratory</h5>
+                        <p class="card-text">Access Laboratory</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Radiology Card -->
+        <div class="col-12 col-sm-6 col-md-4 col-lg-4">
+            <a href="{{ url_for('module_placeholder', module_name='radiology') }}"
+               class="text-decoration-none text-reset">
+                <div class="card module-card h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-radioactive card-icon"></i>
+                        <h5 class="card-title mt-2">Radiology</h5>
+                        <p class="card-text">Access Radiology</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Human Resources Card -->
+        <div class="col-12 col-sm-6 col-md-4 col-lg-4">
+            <a href="{{ url_for('hr_login') }}"
+               class="text-decoration-none text-reset">
+                <div class="card module-card h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-person-badge card-icon"></i>
+                        <h5 class="card-title mt-2">Human Resources</h5>
+                        <p class="card-text">Access Human Resources</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Management Card -->
+        <div class="col-12 col-sm-6 col-md-4 col-lg-4">
+            <a href="{{ url_for('module_placeholder', module_name='management') }}"
+               class="text-decoration-none text-reset">
+                <div class="card module-card h-100">
+                    <div class="card-body text-center">
+                        <i class="bi bi-bar-chart-line card-icon"></i>
+                        <h5 class="card-title mt-2">Management</h5>
+                        <p class="card-text">Access Management</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+        #}
 
     </div>
 </div>

@@ -17,9 +17,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "super_secret_key_change_later")
 
 # -------------------- DATABASE CONFIGURATION --------------------
-DATABASE_URL = os.environ.get(
-    "DATABASE_URL", "postgresql://flask_user:Olarewaju1.@localhost:5432/hospital_db"
-)
+DATABASE_URL = os.environ.get("DATABASE_URL", 'postgresql://flask_user:Olarewaju1.@localhost:5432/hospital2_db')
 
 def get_db_connection():
     """Establish database connection with error handling."""
@@ -243,7 +241,7 @@ def apply_stock_filter(stock, filter_type):
 # -------------------- ROUTES: LANDING & MODULES --------------------
 @app.route('/')
 def landing_page():
-    hospital_name = "Memorial Hospital Ovuru, Nsukka, Enugu State"
+    hospital_name = "All Saint Medical Center Nsukka, Enugu State"
     modules = [
         "System Admin", "Patient Services", "Clinical Services",
         "Pharmacy", "Laboratory", "Radiology", "Billing and Revenue",
@@ -309,7 +307,7 @@ def drug_sales():
     return render_template(
         "drug_sales_dashboard.html",
         pharmacist_name=session.get('pharmacist_username'),
-        hospital_name="Memorial Hospital Ovuru, Nsukka, Enugu State"
+        hospital_name="All Saint Medical Center Nsukka, Enugu State"
     )
 
 @app.route('/pharmacy/add-stock', methods=['GET', 'POST'])
@@ -439,7 +437,7 @@ def pharmacy_receipt():
     return render_template(
         "receipt.html",
         receipt=data,
-        hospital_name="Memorial Hospital Ovuru, Nsukka, Enugu State",
+        hospital_name="All Saint Medical Center Nsukka, Enugu State",
         pharmacist_name=session.get('pharmacist_username')
     )
 
@@ -498,7 +496,7 @@ def reprint_receipt(receipt_no):
         "pharmacist": row[8], "date": row[9].strftime("%Y-%m-%d %H:%M:%S")
     }
 
-    return render_template("receipt.html", receipt=receipt, hospital_name="Memorial Hospital Ovuru, Nsukka, Enugu State")
+    return render_template("receipt.html", receipt=receipt, hospital_name="All Saint Medical Center Nsukka, Enugu State")
 
 @app.route("/pharmacy/confirm-payment", methods=["POST"])
 def confirm_payment():
@@ -813,7 +811,7 @@ def view_receipt(receipt_id):
         "receipt.html",
         receipt=receipt,
         items=items,
-        hospital_name="Memorial Hospital Ovuru, Nsukka, Enugu State"
+        hospital_name="All Saint Medical Center, Nsukka, Enugu State"
     )
 
 # -------------------- ROUTES: BILLING MODULE --------------------
@@ -965,7 +963,7 @@ def billing_receipt(payment_id):
         return render_template(
             "billing_receipt.html",
             receipt=receipt,
-            hospital_name="Memorial Hospital Ovuru, Nsukka, Enugu State",
+            hospital_name="All Saint Medical Center Nsukka, Enugu State",
             user_name=session.get("billing_username")
         )
 
@@ -1020,7 +1018,7 @@ def billing_receipt_page(payment_id):
         "date": row[10].strftime("%Y-%m-%d %H:%M:%S")
     }
 
-    return render_template("billing_receipt.html", receipt=receipt, hospital_name="Memorial Hospital Ovuru, Nsukka, Enugu State")
+    return render_template("billing_receipt.html", receipt=receipt, hospital_name="All Saint Medical Center Nsukka, Enugu State")
 
 @app.route("/billing/receipt/<int:payment_id>")
 def view_payment_receipt(payment_id):
@@ -1775,136 +1773,169 @@ def create_default_hr_data():
     
     cursor = conn.cursor()
     
-    # Default hashed password for 'hr@admin123'
-    hashed_password = generate_password_hash('hr@admin123')
-    
-    # Insert default HR users
     try:
-        cursor.execute("""
-            INSERT INTO hr_users (username, password, full_name, email, role) 
-            VALUES 
-                (%s, %s, %s, %s, %s),
-                (%s, %s, %s, %s, %s)
-            ON CONFLICT (username) DO NOTHING;
-        """, (
-            'hr_admin', hashed_password, 'HR Administrator', 'admin@hospital.com', 'HR Manager',
-            'hr_staff', hashed_password, 'HR Staff', 'staff@hospital.com', 'HR Officer'
-        ))
-    except Exception as e:
-        app.logger.error(f"Error inserting HR users: {e}")
-    
-    # Insert sample departments
-    departments = [
-        ('Administration', 'ADMIN', 'Hospital Administration and Management', 'Dr. John Smith'),
-        ('Medical', 'MED', 'Medical Services Department', 'Dr. Sarah Johnson'),
-        ('Nursing', 'NURS', 'Nursing Services', 'Mrs. Grace Williams'),
-        ('Pharmacy', 'PHARM', 'Pharmacy Department', 'Mr. Michael Brown'),
-        ('Laboratory', 'LAB', 'Laboratory Services', 'Dr. David Miller'),
-        ('Radiology', 'RAD', 'Radiology Department', 'Dr. Lisa Davis'),
-        ('Finance', 'FIN', 'Finance and Billing Department', 'Mr. Robert Wilson'),
-        ('Human Resources', 'HR', 'Human Resources Department', 'Ms. Patricia Taylor'),
-        ('Maintenance', 'MAINT', 'Facility Maintenance', 'Mr. Thomas Anderson'),
-        ('Security', 'SEC', 'Hospital Security', 'Mr. Richard Clark')
-    ]
-    
-    for dept in departments:
+        # Set autocommit to handle each statement separately
+        conn.autocommit = False
+        
+        # Default hashed password for 'hr@admin123'
+        hashed_password = generate_password_hash('hr@admin123')
+        
+        # Insert default HR users - use separate try-except blocks
         try:
             cursor.execute("""
-                INSERT INTO departments (name, code, description, head_of_dept) 
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (code) DO NOTHING;
-            """, dept)
+                INSERT INTO hr_users (username, password, full_name, email, role) 
+                VALUES 
+                    (%s, %s, %s, %s, %s),
+                    (%s, %s, %s, %s, %s)
+                ON CONFLICT (username) DO NOTHING;
+            """, (
+                'hr_admin', hashed_password, 'HR Administrator', 'admin@hospital.com', 'HR Manager',
+                'hr_staff', hashed_password, 'HR Staff', 'staff@hospital.com', 'HR Officer'
+            ))
         except Exception as e:
-            app.logger.error(f"Error inserting department {dept[0]}: {e}")
-    
-    # Get admin department ID for sample staff
-    cursor.execute("SELECT id FROM departments WHERE code = 'ADMIN' LIMIT 1;")
-    admin_dept = cursor.fetchone()
-    
-    # Insert sample staff if departments exist
-    if admin_dept:
-        sample_staff = [
-            ('EMP001', 'John', 'Doe', admin_dept[0], 'Hospital Administrator', 'Full-Time', 
-             'john.doe@hospital.com', '08012345678', '2022-01-15', 850000.00, 'Jane Doe - 08087654321'),
-            ('EMP002', 'Sarah', 'Johnson', admin_dept[0], 'Senior Doctor', 'Full-Time', 
-             'sarah.j@hospital.com', '08023456789', '2021-03-20', 1200000.00, 'Mark Johnson - 08098765432'),
-            ('EMP003', 'Michael', 'Brown', admin_dept[0], 'Chief Pharmacist', 'Full-Time', 
-             'michael.b@hospital.com', '08034567890', '2020-06-10', 950000.00, 'Emily Brown - 08076543210'),
-            ('EMP004', 'Grace', 'Williams', admin_dept[0], 'Head Nurse', 'Full-Time', 
-             'grace.w@hospital.com', '08045678901', '2019-08-05', 750000.00, 'James Williams - 08065432109'),
-            ('EMP005', 'David', 'Miller', admin_dept[0], 'Lab Technician', 'Full-Time', 
-             'david.m@hospital.com', '08056789012', '2022-11-30', 650000.00, 'Sarah Miller - 08054321098')
-        ]
+            app.logger.warning(f"Warning inserting HR users (they may already exist): {e}")
+            conn.rollback()
+            conn.autocommit = False
         
-        for staff in sample_staff:
-            try:
-                cursor.execute("""
-                    INSERT INTO staff (staff_id, first_name, last_name, department_id, position, 
-                                      employment_type, email, phone, hire_date, salary, emergency_contact) 
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (staff_id) DO NOTHING;
-                """, staff)
-            except Exception as e:
-                app.logger.error(f"Error inserting staff {staff[0]}: {e}")
-    
-    # Get HR admin ID for recording
-    cursor.execute("SELECT id FROM hr_users WHERE username = 'hr_admin' LIMIT 1;")
-    hr_admin = cursor.fetchone()
-    
-    # Get staff IDs for sample data
-    cursor.execute("SELECT id, staff_id FROM staff ORDER BY id LIMIT 5;")
-    staff_members = cursor.fetchall()
-    
-    if hr_admin and staff_members:
-        hr_admin_id = hr_admin[0]
-        today = date.today()
-        
-        # Insert sample attendance for today
-        for i, staff in enumerate(staff_members[:3]):  # First 3 staff
-            check_in = '08:00:00' if i != 1 else '08:30:00'  # Make second staff late
-            status = 'Present' if i != 1 else 'Late'
+        # Insert sample departments - use separate transaction
+        try:
+            departments = [
+                ('Administration', 'ADMIN', 'Hospital Administration and Management', 'Dr. John Smith'),
+                ('Medical', 'MED', 'Medical Services Department', 'Dr. Sarah Johnson'),
+                ('Nursing', 'NURS', 'Nursing Services', 'Mrs. Grace Williams'),
+                ('Pharmacy', 'PHARM', 'Pharmacy Department', 'Mr. Michael Brown'),
+                ('Laboratory', 'LAB', 'Laboratory Services', 'Dr. David Miller'),
+                ('Radiology', 'RAD', 'Radiology Department', 'Dr. Lisa Davis'),
+                ('Finance', 'FIN', 'Finance and Billing Department', 'Mr. Robert Wilson'),
+                ('Human Resources', 'HR', 'Human Resources Department', 'Ms. Patricia Taylor'),
+                ('Maintenance', 'MAINT', 'Facility Maintenance', 'Mr. Thomas Anderson'),
+                ('Security', 'SEC', 'Hospital Security', 'Mr. Richard Clark')
+            ]
             
-            try:
-                cursor.execute("""
-                    INSERT INTO attendance (staff_id, date, check_in, check_out, status, recorded_by)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                    ON CONFLICT DO NOTHING;
-                """, (staff[0], today, check_in, '16:00:00', status, hr_admin_id))
-            except Exception as e:
-                app.logger.error(f"Error inserting attendance for {staff[1]}: {e}")
-        
-        # Insert sample leave requests
-        try:
-            cursor.execute("""
-                INSERT INTO leaves (staff_id, leave_type, start_date, end_date, days_requested, reason, status)
-                SELECT 
-                    id,
-                    'Annual Leave',
-                    %s + INTERVAL '5 days',
-                    %s + INTERVAL '12 days',
-                    8,
-                    'Family vacation',
-                    'Pending'
-                FROM staff WHERE staff_id = 'EMP004'
-                UNION ALL
-                SELECT 
-                    id,
-                    'Sick Leave',
-                    %s - INTERVAL '2 days',
-                    %s + INTERVAL '2 days',
-                    5,
-                    'Medical treatment',
-                    'Approved'
-                FROM staff WHERE staff_id = 'EMP005'
-                ON CONFLICT DO NOTHING;
-            """, (today, today, today, today))
+            for dept in departments:
+                try:
+                    cursor.execute("""
+                        INSERT INTO departments (name, code, description, head_of_dept) 
+                        VALUES (%s, %s, %s, %s)
+                        ON CONFLICT (code) DO NOTHING;
+                    """, dept)
+                except Exception as e:
+                    app.logger.warning(f"Warning inserting department {dept[0]}: {e}")
+                    continue  # Continue with next department
+            
+            conn.commit()
+            
         except Exception as e:
-            app.logger.error(f"Error inserting leaves: {e}")
+            app.logger.warning(f"Warning with departments transaction: {e}")
+            conn.rollback()
+        
+        # Get admin department ID for sample staff
+        try:
+            cursor.execute("SELECT id FROM departments WHERE code = 'ADMIN' LIMIT 1;")
+            admin_dept = cursor.fetchone()
+            
+            # Insert sample staff if departments exist
+            if admin_dept:
+                sample_staff = [
+                    ('EMP001', 'John', 'Doe', admin_dept[0], 'Hospital Administrator', 'Full-Time', 
+                     'john.doe@hospital.com', '08012345678', '2022-01-15', 850000.00, 'Jane Doe - 08087654321'),
+                    ('EMP002', 'Sarah', 'Johnson', admin_dept[0], 'Senior Doctor', 'Full-Time', 
+                     'sarah.j@hospital.com', '08023456789', '2021-03-20', 1200000.00, 'Mark Johnson - 08098765432'),
+                    ('EMP003', 'Michael', 'Brown', admin_dept[0], 'Chief Pharmacist', 'Full-Time', 
+                     'michael.b@hospital.com', '08034567890', '2020-06-10', 950000.00, 'Emily Brown - 08076543210'),
+                    ('EMP004', 'Grace', 'Williams', admin_dept[0], 'Head Nurse', 'Full-Time', 
+                     'grace.w@hospital.com', '08045678901', '2019-08-05', 750000.00, 'James Williams - 08065432109'),
+                    ('EMP005', 'David', 'Miller', admin_dept[0], 'Lab Technician', 'Full-Time', 
+                     'david.m@hospital.com', '08056789012', '2022-11-30', 650000.00, 'Sarah Miller - 08054321098')
+                ]
+                
+                for staff in sample_staff:
+                    try:
+                        cursor.execute("""
+                            INSERT INTO staff (staff_id, first_name, last_name, department_id, position, 
+                                              employment_type, email, phone, hire_date, salary, emergency_contact) 
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            ON CONFLICT (staff_id) DO NOTHING;
+                        """, staff)
+                    except Exception as e:
+                        app.logger.warning(f"Warning inserting staff {staff[0]}: {e}")
+                        continue
+                
+                conn.commit()
+                
+        except Exception as e:
+            app.logger.warning(f"Warning with staff insertion: {e}")
+            conn.rollback()
+        
+        # Get HR admin ID for recording
+        try:
+            cursor.execute("SELECT id FROM hr_users WHERE username = 'hr_admin' LIMIT 1;")
+            hr_admin = cursor.fetchone()
+            
+            # Get staff IDs for sample data
+            cursor.execute("SELECT id, staff_id FROM staff ORDER BY id LIMIT 5;")
+            staff_members = cursor.fetchall()
+            
+            if hr_admin and staff_members:
+                hr_admin_id = hr_admin[0]
+                today = date.today()
+                
+                # Insert sample attendance for today
+                for i, staff in enumerate(staff_members[:3]):  # First 3 staff
+                    check_in = '08:00:00' if i != 1 else '08:30:00'  # Make second staff late
+                    status = 'Present' if i != 1 else 'Late'
+                    
+                    try:
+                        cursor.execute("""
+                            INSERT INTO attendance (staff_id, date, check_in, check_out, status, recorded_by)
+                            VALUES (%s, %s, %s, %s, %s, %s)
+                            ON CONFLICT DO NOTHING;
+                        """, (staff[0], today, check_in, '16:00:00', status, hr_admin_id))
+                    except Exception as e:
+                        app.logger.warning(f"Warning inserting attendance for {staff[1]}: {e}")
+                        continue
+                
+                # Insert sample leave requests
+                try:
+                    cursor.execute("""
+                        INSERT INTO leaves (staff_id, leave_type, start_date, end_date, days_requested, reason, status)
+                        SELECT 
+                            id,
+                            'Annual Leave',
+                            %s + INTERVAL '5 days',
+                            %s + INTERVAL '12 days',
+                            8,
+                            'Family vacation',
+                            'Pending'
+                        FROM staff WHERE staff_id = 'EMP004'
+                        UNION ALL
+                        SELECT 
+                            id,
+                            'Sick Leave',
+                            %s - INTERVAL '2 days',
+                            %s + INTERVAL '2 days',
+                            5,
+                            'Medical treatment',
+                            'Approved'
+                        FROM staff WHERE staff_id = 'EMP005'
+                        ON CONFLICT DO NOTHING;
+                    """, (today, today, today, today))
+                except Exception as e:
+                    app.logger.warning(f"Warning inserting leaves: {e}")
+                
+                conn.commit()
+                
+        except Exception as e:
+            app.logger.warning(f"Warning with sample data insertion: {e}")
+            conn.rollback()
+        
+    except Exception as e:
+        app.logger.error(f"Error in create_default_hr_data: {e}")
+        conn.rollback()
     
-    conn.commit()
-    cursor.close()
-    conn.close()
-
+    finally:
+        cursor.close()
+        conn.close()
 # -------------------- ROUTES: HR MODULE --------------------
 @app.route("/hr/login", methods=["GET", "POST"])
 def hr_login():
@@ -1916,7 +1947,7 @@ def hr_login():
         if not conn:
             flash("Database connection error", "danger")
             return render_template("hr_login.html", 
-                                 hospital_name="Memorial Hospital Ovuru, Nsukka, Enugu State")
+                                 hospital_name="All Saint Medical Center Nsukka, Enugu State")
 
         cur = conn.cursor()
 
@@ -1954,7 +1985,7 @@ def hr_login():
             flash("Login error. Please try again.", "danger")
 
     return render_template("hr_login.html", 
-                         hospital_name="Memorial Hospital Ovuru, Nsukka, Enugu State")    
+                         hospital_name="All Saint Medical Center Nsukka, Enugu State")    
 
 
 # @app.route("/hr/scheduling")
@@ -2146,7 +2177,7 @@ def hr_dashboard():
     
     return render_template(
         "hr_dashboard.html",
-        hospital_name="Memorial Hospital Ovuru, Nsukka, Enugu State",
+        hospital_name="All Saint Medical Center Nsukka, Enugu State",
         total_staff=total_staff,
         active_staff=active_staff,
         on_leave=on_leave,
@@ -2223,7 +2254,7 @@ def staff_management():
                          active_staff=active_staff,
                          on_contract=on_contract,
                          departments_count=departments_count,
-                         hospital_name="Memorial Hospital Ovuru, Nsukka, Enugu State",
+                         hospital_name="All Saint Medical Center Nsukka, Enugu State",
                          current_year=date.today().year)    
 # View Staff Details
 @app.route("/hr/staff/<int:staff_id>")
@@ -2301,7 +2332,7 @@ def view_staff(staff_id):
                          staff=staff_dict,
                          today=today,
                          employment_duration=employment_duration,
-                         hospital_name="Memorial Hospital Ovuru, Nsukka, Enugu State")
+                         hospital_name="All Saint Medical Center Nsukka, Enugu State")
 # Add New Staff
 @app.route("/hr/staff/add", methods=["GET", "POST"])
 def add_staff():
@@ -2428,7 +2459,7 @@ def add_staff():
                          departments=departments,
                          suggested_id=suggested_id,
                          today=today,
-                         hospital_name="Memorial Hospital Ovuru, Nsukka, Enugu State")
+                         hospital_name="All Saint Medical Center Nsukka, Enugu State")
 
 # Edit Staff
 @app.route("/hr/staff/edit/<int:staff_id>", methods=["GET", "POST"])
@@ -2510,7 +2541,7 @@ def edit_staff(staff_id):
     return render_template("edit_staff.html",
                          staff=staff,
                          departments=departments,
-                         hospital_name="Memorial Hospital Ovuru, Nsukka, Enugu State")
+                         hospital_name="All Saint Medical Center Nsukka, Enugu State")
 
 
 # ==================== ROUTES: SCHEDULING MODULE ====================
@@ -2585,7 +2616,7 @@ def scheduling():
                          departments=departments,
                          staff_list=staff_list,
                          current_month=current_month.strftime("%B %Y"),
-                         hospital_name="Memorial Hospital Ovuru, Nsukka, Enugu State")
+                         hospital_name="All Saint Medical Center Nsukka, Enugu State")
     
     
 @app.route("/hr/scheduling/create", methods=["GET", "POST"])
@@ -2672,7 +2703,7 @@ def create_schedule():
     return render_template("create_schedule.html",
                          staff_list=staff_list,
                          tomorrow=tomorrow,
-                         hospital_name="Memorial Hospital Ovuru, Nsukka, Enugu State")
+                         hospital_name="All Saint Medical Center Nsukka, Enugu State")
 
 @app.route("/hr/scheduling/roster")
 def view_roster():
@@ -2800,7 +2831,7 @@ def view_roster():
                          total_shifts=total_shifts,
                          unique_staff=unique_staff,
                          unique_departments=unique_departments,
-                         hospital_name="Memorial Hospital Ovuru, Nsukka, Enugu State")
+                         hospital_name="All Saint Medical Center Nsukka, Enugu State")
 @app.route("/hr/scheduling/shift-swap", methods=["GET", "POST"])
 def shift_swap():
     if "hr_user_id" not in session:
@@ -2974,7 +3005,7 @@ def shift_swap():
                          pending_swaps=pending_swaps,
                          upcoming_schedules=upcoming_schedules,
                          staff_list=staff_list,
-                         hospital_name="Memorial Hospital Ovuru, Nsukka, Enugu State")
+                         hospital_name="All Saint Medical Center Nsukka, Enugu State")
 
 @app.route("/hr/scheduling/reports")
 def schedule_reports():
@@ -3108,7 +3139,7 @@ def schedule_reports():
                          selected_month=int(month),
                          selected_year=int(year),
                          selected_department=department_id,
-                         hospital_name="Memorial Hospital Ovuru, Nsukka, Enugu State")
+                         hospital_name="All Saint Medical Center Nsukka, Enugu State")
 
 # Route to delete schedule
 @app.route("/hr/scheduling/delete/<int:schedule_id>", methods=["POST"])
@@ -3205,7 +3236,7 @@ def delete_schedule(schedule_id):
 #                          departments=departments,
 #                          staff_list=staff_list,
 #                          current_month=current_month.strftime("%B %Y"),
-#                          hospital_name="Memorial Hospital Ovuru, Nsukka, Enugu State")
+#                          hospital_name="All Saint Medical Center Nsukka, Enugu State")
 
 
 
@@ -3256,9 +3287,1117 @@ def check_availability():
     finally:
         cur.close()
         conn.close()
-# -------------------- RUN APP --------------------
+        
+        
+# Add these tables to your existing create_tables() function:
+def create_tables():
+    """Create all necessary tables if they don't exist."""
+    queries = {
+        # ... your existing tables ...
+        
+        # Add these new tables for admin module:
+        "admin_users": """
+            CREATE TABLE IF NOT EXISTS admin_users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                full_name VARCHAR(100),
+                email VARCHAR(100),
+                role VARCHAR(50) DEFAULT 'Admin',
+                is_super_admin BOOLEAN DEFAULT FALSE,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER REFERENCES admin_users(id),
+                last_login TIMESTAMP
+            );
+        """,
+        "cashier_users": """
+            CREATE TABLE IF NOT EXISTS cashier_users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                full_name VARCHAR(100),
+                email VARCHAR(100),
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER REFERENCES admin_users(id),
+                last_login TIMESTAMP
+            );
+        """,
+        "admin_audit_logs": """
+            CREATE TABLE IF NOT EXISTS admin_audit_logs (
+                id SERIAL PRIMARY KEY,
+                admin_id INTEGER REFERENCES admin_users(id),
+                action VARCHAR(100) NOT NULL,
+                details TEXT,
+                ip_address VARCHAR(45),
+                user_agent TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """,
+        
+        # Make sure these exist (they should from your existing code):
+        "pharmacists": """
+            CREATE TABLE IF NOT EXISTS pharmacists (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                full_name VARCHAR(100),
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER REFERENCES admin_users(id)
+            );
+        """,
+        "billing_users": """
+            CREATE TABLE IF NOT EXISTS billing_users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                full_name VARCHAR(100),
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER REFERENCES admin_users(id)
+            );
+        """
+    }
+
+    conn = get_db_connection()
+    if not conn:
+        return
+
+    cursor = conn.cursor()
+    for table, query in queries.items():
+        try:
+            cursor.execute(query)
+        except Exception as e:
+            app.logger.error(f"Error creating table {table}: {e}")
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+def create_default_admin():
+    """Create default admin user."""
+    conn = get_db_connection()
+    if not conn:
+        return
+
+    cursor = conn.cursor()
+    try:
+        # Check if admin exists
+        cursor.execute("SELECT COUNT(*) FROM admin_users WHERE username = 'admin'")
+        if cursor.fetchone()[0] == 0:
+            hashed_pw = generate_password_hash('admin123')
+            cursor.execute("""
+                INSERT INTO admin_users (username, password, full_name, email, role, is_super_admin)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, ('admin', hashed_pw, 'System Administrator', 'admin@hospital.com', 'Super Admin', True))
+            conn.commit()
+            app.logger.info("Default admin user created")
+    except Exception as e:
+        app.logger.error(f"Error creating default admin: {e}")
+    finally:
+        cursor.close()
+        conn.close()
+
+# Add this to your existing helper functions:
+def log_admin_action(admin_id, action, details=None):
+    """Log admin actions for audit trail."""
+    conn = get_db_connection()
+    if not conn:
+        return
+    
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO admin_audit_logs (admin_id, action, details, ip_address, user_agent)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (admin_id, action, details, request.remote_addr, request.user_agent.string))
+        conn.commit()
+    except Exception as e:
+        app.logger.error(f"Error logging admin action: {e}")
+    finally:
+        cursor.close()
+        conn.close()
+
+# ==================== ROUTES: ADMIN MODULE ====================
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        conn = get_db_connection()
+        if not conn:
+            flash("Database connection error", "danger")
+            return render_template("admin_login.html")
+
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, username, password, full_name, role, is_active 
+            FROM admin_users 
+            WHERE username=%s
+        """, (username,))
+        admin = cursor.fetchone()
+
+        if admin and admin[5]:  # Check if is_active
+            if check_password_hash(admin[2], password):
+                session['admin_id'] = admin[0]
+                session['admin_username'] = admin[1]
+                session['admin_full_name'] = admin[3]
+                session['admin_role'] = admin[4]
+                
+                # Update last login
+                cursor.execute("""
+                    UPDATE admin_users 
+                    SET last_login = CURRENT_TIMESTAMP 
+                    WHERE id = %s
+                """, (admin[0],))
+                conn.commit()
+                
+                # Log login action
+                log_admin_action(admin[0], 'LOGIN', f'User {username} logged in')
+                
+                flash(f"Welcome, {admin[3]}!", "success")
+                return redirect(url_for('admin_dashboard'))
+            else:
+                flash("Invalid password", "danger")
+        else:
+            flash("Invalid username or account inactive", "danger")
+
+        cursor.close()
+        conn.close()
+
+    return render_template("admin_login.html")
+
+@app.route('/admin/dashboard')
+def admin_dashboard():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    # Get statistics
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    stats = {}
+    try:
+        # User counts
+        cursor.execute("SELECT COUNT(*) FROM admin_users WHERE is_active = TRUE")
+        stats['admins_count'] = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM pharmacists WHERE is_active = TRUE")
+        stats['pharmacists_count'] = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM billing_users WHERE is_active = TRUE")
+        stats['cashiers_count'] = cursor.fetchone()[0]
+        
+        # Today's billing collection
+        today = date.today()
+        cursor.execute("""
+            SELECT COALESCE(SUM(amount_paid), 0) 
+            FROM payments 
+            WHERE DATE(payment_date) = %s
+        """, (today,))
+        stats['todays_collection'] = float(cursor.fetchone()[0] or 0)
+        
+        # Pharmacy stock alerts
+        cursor.execute("""
+            SELECT COUNT(*) FROM drugs 
+            WHERE stock_quantity <= low_stock_threshold 
+            AND expiry_date > CURRENT_DATE
+        """)
+        stats['low_stock_count'] = cursor.fetchone()[0]
+        
+        cursor.execute("""
+            SELECT COUNT(*) FROM drugs 
+            WHERE expiry_date < CURRENT_DATE AND stock_quantity > 0
+        """)
+        stats['expired_stock_count'] = cursor.fetchone()[0]
+        
+        # Recent pharmacy sales
+        cursor.execute("""
+            SELECT COUNT(*), COALESCE(SUM(grand_total), 0)
+            FROM receipts 
+            WHERE DATE(created_at) = %s
+        """, (today,))
+        result = cursor.fetchone()
+        stats['pharmacy_sales_count'] = result[0]
+        stats['pharmacy_revenue'] = float(result[1] or 0)
+        
+        # Recent admin actions
+        cursor.execute("""
+            SELECT a.username, l.action, l.created_at 
+            FROM admin_audit_logs l
+            JOIN admin_users a ON l.admin_id = a.id
+            ORDER BY l.created_at DESC 
+            LIMIT 10
+        """)
+        stats['recent_actions'] = cursor.fetchall()
+        
+    except Exception as e:
+        app.logger.error(f"Error fetching admin stats: {e}")
+        flash("Error loading dashboard statistics", "warning")
+        stats = {}
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template(
+        "admin_dashboard.html",
+        stats=stats,
+        hospital_name="All Saint Medical Center Nsukka, Enugu State",
+        admin_name=session.get('admin_full_name', 'Admin')
+    )
+
+@app.route('/admin/logout')
+def admin_logout():
+    if 'admin_id' in session:
+        log_admin_action(session['admin_id'], 'LOGOUT')
+    session.clear()
+    flash("Logged out successfully", "success")
+    return redirect(url_for('admin_login'))
+
+# ==================== ADMIN USER MANAGEMENT ====================
+
+@app.route('/admin/users/admins')
+def admin_manage_admins():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("""
+            SELECT id, username, full_name, email, role, 
+                   is_super_admin, is_active, created_at, last_login
+            FROM admin_users 
+            ORDER BY created_at DESC
+        """)
+        admins = cursor.fetchall()
+    except Exception as e:
+        app.logger.error(f"Error fetching admins: {e}")
+        admins = []
+        flash("Error loading admin users", "danger")
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template(
+        "admin_manage_admins.html",
+        admins=admins,
+        admin_name=session.get('admin_full_name', 'Admin')
+    )
+
+@app.route('/admin/users/create-admin', methods=['GET', 'POST'])
+def admin_create_admin():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        full_name = request.form['full_name']
+        email = request.form.get('email', '')
+        role = request.form.get('role', 'Admin')
+        
+        if not all([username, password, full_name]):
+            flash("Username, password, and full name are required", "danger")
+            return redirect(url_for('admin_create_admin'))
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # Check if username exists
+            cursor.execute("SELECT id FROM admin_users WHERE username = %s", (username,))
+            if cursor.fetchone():
+                flash("Username already exists", "danger")
+                return redirect(url_for('admin_create_admin'))
+            
+            hashed_pw = generate_password_hash(password)
+            cursor.execute("""
+                INSERT INTO admin_users (username, password, full_name, email, role, created_by)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (username, hashed_pw, full_name, email, role, session['admin_id']))
+            
+            conn.commit()
+            
+            # Log action
+            log_admin_action(session['admin_id'], 'CREATE_ADMIN', 
+                           f'Created admin account: {username} ({full_name})')
+            
+            flash(f"Admin account created for {full_name}", "success")
+            return redirect(url_for('admin_manage_admins'))
+            
+        except Exception as e:
+            conn.rollback()
+            app.logger.error(f"Error creating admin: {e}")
+            flash(f"Error creating admin account: {str(e)}", "danger")
+            
+        finally:
+            cursor.close()
+            conn.close()
+    
+    return render_template(
+        "admin_create_user.html",
+        user_type="admin",
+        admin_name=session.get('admin_full_name', 'Admin')
+    )
+
+@app.route('/admin/users/create-cashier', methods=['GET', 'POST'])
+def admin_create_cashier():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        full_name = request.form['full_name']
+        email = request.form.get('email', '')
+        
+        if not all([username, password, full_name]):
+            flash("Username, password, and full name are required", "danger")
+            return redirect(url_for('admin_create_cashier'))
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # Check if username exists in both cashier_users and billing_users
+            cursor.execute("SELECT id FROM cashier_users WHERE username = %s", (username,))
+            if cursor.fetchone():
+                flash("Username already exists in cashier users", "danger")
+                return redirect(url_for('admin_create_cashier'))
+            
+            cursor.execute("SELECT id FROM billing_users WHERE username = %s", (username,))
+            if cursor.fetchone():
+                flash("Username already exists in billing users", "danger")
+                return redirect(url_for('admin_create_cashier'))
+            
+            hashed_pw = generate_password_hash(password)
+            
+            # Create in cashier_users table
+            cursor.execute("""
+                INSERT INTO cashier_users (username, password, full_name, email, created_by)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (username, hashed_pw, full_name, email, session['admin_id']))
+            
+            # Also create in billing_users table for compatibility
+            cursor.execute("""
+                INSERT INTO billing_users (username, password, full_name, created_by)
+                VALUES (%s, %s, %s, %s)
+                ON CONFLICT (username) DO NOTHING
+            """, (username, hashed_pw, full_name, session['admin_id']))
+            
+            conn.commit()
+            
+            # Log action
+            log_admin_action(session['admin_id'], 'CREATE_CASHIER', 
+                           f'Created cashier account: {username} ({full_name})')
+            
+            flash(f"Cashier account created for {full_name}", "success")
+            return redirect(url_for('admin_manage_cashiers'))
+            
+        except Exception as e:
+            conn.rollback()
+            app.logger.error(f"Error creating cashier: {e}")
+            flash(f"Error creating cashier account: {str(e)}", "danger")
+            
+        finally:
+            cursor.close()
+            conn.close()
+    
+    return render_template(
+        "admin_create_user.html",
+        user_type="cashier",
+        admin_name=session.get('admin_full_name', 'Admin')
+    )
+
+@app.route('/admin/users/create-pharmacist', methods=['GET', 'POST'])
+def admin_create_pharmacist():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        full_name = request.form['full_name']
+        
+        if not all([username, password, full_name]):
+            flash("Username, password, and full name are required", "danger")
+            return redirect(url_for('admin_create_pharmacist'))
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # Check if username exists
+            cursor.execute("SELECT id FROM pharmacists WHERE username = %s", (username,))
+            if cursor.fetchone():
+                flash("Username already exists", "danger")
+                return redirect(url_for('admin_create_pharmacist'))
+            
+            hashed_pw = generate_password_hash(password)
+            cursor.execute("""
+                INSERT INTO pharmacists (username, password, full_name, created_by)
+                VALUES (%s, %s, %s, %s)
+            """, (username, hashed_pw, full_name, session['admin_id']))
+            
+            conn.commit()
+            
+            # Log action
+            log_admin_action(session['admin_id'], 'CREATE_PHARMACIST', 
+                           f'Created pharmacist account: {username} ({full_name})')
+            
+            flash(f"Pharmacist account created for {full_name}", "success")
+            return redirect(url_for('admin_manage_pharmacists'))
+            
+        except Exception as e:
+            conn.rollback()
+            app.logger.error(f"Error creating pharmacist: {e}")
+            flash(f"Error creating pharmacist account: {str(e)}", "danger")
+            
+        finally:
+            cursor.close()
+            conn.close()
+    
+    return render_template(
+        "admin_create_user.html",
+        user_type="pharmacist",
+        admin_name=session.get('admin_full_name', 'Admin')
+    )
+
+@app.route('/admin/users/cashiers')
+def admin_manage_cashiers():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("""
+            SELECT id, username, full_name, email, is_active, created_at, last_login
+            FROM cashier_users 
+            ORDER BY created_at DESC
+        """)
+        cashiers = cursor.fetchall()
+    except Exception as e:
+        app.logger.error(f"Error fetching cashiers: {e}")
+        cashiers = []
+        flash("Error loading cashier users", "danger")
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template(
+        "admin_manage_cashiers.html",
+        cashiers=cashiers,
+        admin_name=session.get('admin_full_name', 'Admin')
+    )
+
+@app.route('/admin/users/pharmacists')
+def admin_manage_pharmacists():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("""
+            SELECT id, username, full_name, is_active, created_at
+            FROM pharmacists 
+            ORDER BY created_at DESC
+        """)
+        pharmacists = cursor.fetchall()
+    except Exception as e:
+        app.logger.error(f"Error fetching pharmacists: {e}")
+        pharmacists = []
+        flash("Error loading pharmacist users", "danger")
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template(
+        "admin_manage_pharmacists.html",
+        pharmacists=pharmacists,
+        admin_name=session.get('admin_full_name', 'Admin')
+    )
+
+@app.route('/admin/users/toggle-status/<user_type>/<int:user_id>', methods=['POST'])
+def admin_toggle_user_status(user_type, user_id):
+    if 'admin_id' not in session:
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        if user_type == 'admin':
+            table = 'admin_users'
+        elif user_type == 'cashier':
+            table = 'cashier_users'
+        elif user_type == 'pharmacist':
+            table = 'pharmacists'
+        else:
+            return jsonify({"success": False, "message": "Invalid user type"}), 400
+        
+        # Get current status
+        cursor.execute(f"SELECT is_active FROM {table} WHERE id = %s", (user_id,))
+        result = cursor.fetchone()
+        if not result:
+            return jsonify({"success": False, "message": "User not found"}), 404
+        
+        new_status = not result[0]
+        
+        # Update status
+        cursor.execute(f"UPDATE {table} SET is_active = %s WHERE id = %s", (new_status, user_id))
+        conn.commit()
+        
+        # Log action
+        status_text = "activated" if new_status else "deactivated"
+        log_admin_action(session['admin_id'], 'TOGGLE_USER_STATUS', 
+                       f'{status_text} {user_type} user ID: {user_id}')
+        
+        return jsonify({
+            "success": True, 
+            "message": f"User {status_text} successfully",
+            "new_status": new_status
+        })
+        
+    except Exception as e:
+        conn.rollback()
+        app.logger.error(f"Error toggling user status: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
+        
+    finally:
+        cursor.close()
+        conn.close()
+
+# ==================== PHARMACY REPORTS (Admin Access) ====================
+
+@app.route('/admin/reports/pharmacy-stock')
+def admin_pharmacy_stock():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    filter_type = request.args.get("filter", "all")
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        cur.execute("""
+            SELECT id, name, strength, stock_quantity, unit_price, 
+                   expiry_date, low_stock_threshold
+            FROM drugs
+            ORDER BY expiry_date ASC
+        """)
+        rows = cur.fetchall()
+        
+        # Build stock snapshot
+        stock = build_stock_snapshot(rows, date.today())
+        stock = apply_stock_filter(stock, filter_type)
+        
+        # Get summary stats
+        total_stock_value = sum(d["total_value"] for d in stock)
+        total_items = len(rows)
+        filtered_items = len(stock)
+        
+    except Exception as e:
+        app.logger.error(f"Error fetching pharmacy stock: {e}")
+        stock = []
+        total_stock_value = 0
+        total_items = 0
+        filtered_items = 0
+        flash("Error loading pharmacy stock report", "danger")
+    
+    cur.close()
+    conn.close()
+    
+    return render_template(
+        "admin_pharmacy_stock.html",
+        stock=stock,
+        current_filter=filter_type,
+        total_stock_value=total_stock_value,
+        total_items=total_items,
+        filtered_items=filtered_items,
+        admin_name=session.get('admin_full_name', 'Admin')
+    )
+
+@app.route('/admin/reports/pharmacy-revenue', methods=['GET', 'POST'])
+def admin_pharmacy_revenue():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    report_type = request.form.get("period", "daily")
+    selected_day = request.form.get("day")
+    selected_month = request.form.get("month")
+    selected_year = request.form.get("year")
+    today = date.today()
+    
+    if report_type == "daily":
+        start_date = end_date = datetime.strptime(selected_day, "%Y-%m-%d").date() if selected_day else today
+    elif report_type == "weekly":
+        d = datetime.strptime(selected_day, "%Y-%m-%d").date() if selected_day else today
+        start_date = d - timedelta(days=d.weekday())
+        end_date = start_date + timedelta(days=6)
+    elif report_type == "monthly":
+        month = int(selected_month) if selected_month else today.month
+        year = int(selected_year) if selected_year else today.year
+        start_date = date(year, month, 1)
+        if month == 12:
+            end_date = date(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            end_date = date(year, month + 1, 1) - timedelta(days=1)
+    else:
+        flash("Invalid report period", "danger")
+        return redirect(url_for("admin_dashboard"))
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        # Get pharmacy sales
+        cur.execute("""
+            SELECT r.id, r.patient_name, r.patient_id, r.grand_total, 
+                   r.created_at, p.username as pharmacist
+            FROM receipts r
+            LEFT JOIN pharmacists p ON r.pharmacist = p.username
+            WHERE DATE(r.created_at) BETWEEN %s AND %s
+            ORDER BY r.created_at DESC
+        """, (start_date, end_date))
+        sales = cur.fetchall()
+        
+        # Get summary statistics
+        cur.execute("""
+            SELECT 
+                COUNT(*) as transactions,
+                COALESCE(SUM(grand_total), 0) as total_revenue,
+                AVG(grand_total) as avg_transaction,
+                MIN(grand_total) as min_transaction,
+                MAX(grand_total) as max_transaction
+            FROM receipts
+            WHERE DATE(created_at) BETWEEN %s AND %s
+        """, (start_date, end_date))
+        
+        stats = cur.fetchone()
+        total_revenue = float(stats[1]) if stats[1] else 0.0
+        avg_transaction = float(stats[2]) if stats[2] else 0.0
+        
+        # Get top selling drugs
+        cur.execute("""
+            SELECT 
+                ri.drug_name,
+                ri.strength,
+                SUM(ri.quantity) as total_quantity,
+                SUM(ri.quantity * ri.unit_price) as total_value
+            FROM receipt_items ri
+            JOIN receipts r ON ri.receipt_id = r.id
+            WHERE DATE(r.created_at) BETWEEN %s AND %s
+            GROUP BY ri.drug_name, ri.strength
+            ORDER BY total_value DESC
+            LIMIT 10
+        """, (start_date, end_date))
+        
+        top_drugs = cur.fetchall()
+        
+    except Exception as e:
+        app.logger.error(f"Error fetching pharmacy revenue: {e}")
+        sales = []
+        total_revenue = 0
+        avg_transaction = 0
+        top_drugs = []
+        flash("Error loading pharmacy revenue report", "danger")
+    
+    cur.close()
+    conn.close()
+    
+    months = [(i, month_name[i]) for i in range(1, 13)]
+    years = range(2024, today.year + 1)
+    
+    return render_template(
+        "admin_pharmacy_revenue.html",
+        sales=sales,
+        total_revenue=total_revenue,
+        avg_transaction=avg_transaction,
+        top_drugs=top_drugs,
+        period=report_type,
+        start_date=start_date,
+        end_date=end_date,
+        selected_day=selected_day,
+        selected_month=int(selected_month) if selected_month else today.month,
+        selected_year=int(selected_year) if selected_year else today.year,
+        months=months,
+        years=years,
+        admin_name=session.get('admin_full_name', 'Admin')
+    )
+
+# ==================== BILLING REPORTS (Admin Access) ====================
+
+@app.route('/admin/reports/billing-payments')
+def admin_billing_payments():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    # Get filter parameters
+    patient_name = request.args.get("patient_name", "").strip()
+    service_type = request.args.get("service_type", "")
+    payment_method = request.args.get("payment_method", "")
+    status = request.args.get("status", "")
+    start_date = request.args.get("start_date")
+    end_date = request.args.get("end_date")
+    
+    # Pagination
+    page = request.args.get("page", 1, type=int)
+    per_page = 20
+    
+    # Build query
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        # Base query
+        query = """
+            SELECT p.*, bu.username as cashier_name
+            FROM payments p
+            LEFT JOIN billing_users bu ON p.recorded_by = bu.id
+            WHERE 1=1
+        """
+        count_query = "SELECT COUNT(*) FROM payments WHERE 1=1"
+        params = []
+        
+        # Apply filters
+        if patient_name:
+            query += " AND LOWER(p.patient_name) LIKE LOWER(%s)"
+            count_query += " AND LOWER(patient_name) LIKE LOWER(%s)"
+            params.append(f"%{patient_name}%")
+        
+        if service_type:
+            query += " AND p.service_type = %s"
+            count_query += " AND service_type = %s"
+            params.append(service_type)
+        
+        if payment_method:
+            query += " AND p.payment_method = %s"
+            count_query += " AND payment_method = %s"
+            params.append(payment_method)
+        
+        if status:
+            query += " AND p.status = %s"
+            count_query += " AND status = %s"
+            params.append(status)
+        
+        if start_date:
+            query += " AND p.payment_date >= %s"
+            count_query += " AND payment_date >= %s"
+            params.append(start_date)
+        
+        if end_date:
+            query += " AND p.payment_date <= %s"
+            count_query += " AND payment_date <= %s"
+            params.append(end_date)
+        
+        # Get total count
+        cur.execute(count_query, params)
+        total_items = cur.fetchone()[0]
+        
+        # Apply ordering and pagination
+        query += " ORDER BY p.created_at DESC LIMIT %s OFFSET %s"
+        offset = (page - 1) * per_page
+        params.extend([per_page, offset])
+        
+        # Execute main query
+        cur.execute(query, params)
+        payments = cur.fetchall()
+        
+        # Get unique service types for dropdown
+        cur.execute("SELECT DISTINCT service_type FROM payments WHERE service_type IS NOT NULL ORDER BY service_type")
+        service_types = [row[0] for row in cur.fetchall()]
+        
+        # Calculate total amount
+        total_amount = 0
+        formatted_payments = []
+        for payment in payments:
+            payment_dict = {
+                "id": payment[0],
+                "patient_name": payment[1],
+                "service_type": payment[2],
+                "subtotal": float(payment[3]),
+                "discount": float(payment[4]),
+                "tax": float(payment[5]),
+                "grand_total": float(payment[6]),
+                "amount_paid": float(payment[7]),
+                "balance": float(payment[8]),
+                "payment_method": payment[9],
+                "status": payment[10],
+                "payment_date": payment[11],
+                "created_at": payment[13],
+                "cashier_name": payment[14]
+            }
+            formatted_payments.append(payment_dict)
+            total_amount += payment_dict["amount_paid"]
+        
+        # Get summary statistics - Simplified version
+        stats_query = """
+            SELECT 
+                COUNT(*) as total_transactions,
+                COALESCE(SUM(amount_paid), 0) as total_collected,
+                COALESCE(AVG(amount_paid), 0) as avg_payment,
+                COUNT(DISTINCT payment_method) as payment_methods_count,
+                COUNT(CASE WHEN status = 'Paid' THEN 1 END) as paid_count,
+                COUNT(CASE WHEN status = 'Partial' THEN 1 END) as partial_count
+            FROM payments
+            WHERE 1=1
+        """
+        stats_params = []
+        
+        if patient_name:
+            stats_query += " AND LOWER(patient_name) LIKE LOWER(%s)"
+            stats_params.append(f"%{patient_name}%")
+        
+        if service_type:
+            stats_query += " AND service_type = %s"
+            stats_params.append(service_type)
+        
+        if payment_method:
+            stats_query += " AND payment_method = %s"
+            stats_params.append(payment_method)
+        
+        if status:
+            stats_query += " AND status = %s"
+            stats_params.append(status)
+        
+        if start_date:
+            stats_query += " AND payment_date >= %s"
+            stats_params.append(start_date)
+        
+        if end_date:
+            stats_query += " AND payment_date <= %s"
+            stats_params.append(end_date)
+        
+        cur.execute(stats_query, stats_params)
+        stats_row = cur.fetchone()
+        
+        if stats_row:
+            stats = {
+                'total_transactions': stats_row[0],
+                'total_collected': float(stats_row[1]) if stats_row[1] else 0.0,
+                'avg_payment': float(stats_row[2]) if stats_row[2] else 0.0,
+                'payment_methods_count': stats_row[3],
+                'paid_count': stats_row[4],
+                'partial_count': stats_row[5]
+            }
+        else:
+            stats = {
+                'total_transactions': 0,
+                'total_collected': 0.0,
+                'avg_payment': 0.0,
+                'payment_methods_count': 0,
+                'paid_count': 0,
+                'partial_count': 0
+            }
+        
+    except Exception as e:
+        app.logger.error(f"Error fetching billing payments: {e}")
+        payments = []
+        formatted_payments = []
+        service_types = []
+        total_items = 0
+        total_amount = 0
+        stats = {
+            'total_transactions': 0,
+            'total_collected': 0.0,
+            'avg_payment': 0.0,
+            'payment_methods_count': 0,
+            'paid_count': 0,
+            'partial_count': 0
+        }
+        flash("Error loading billing payments report", "danger")
+    
+    cur.close()
+    conn.close()
+    
+    # Calculate pagination
+    total_pages = (total_items + per_page - 1) // per_page
+    
+    return render_template(
+        "admin_billing_payments.html",
+        payments=formatted_payments,
+        service_types=service_types,
+        total_items=total_items,
+        total_amount=total_amount,
+        stats=stats,
+        page=page,
+        total_pages=total_pages,
+        current_filters=request.args,
+        admin_name=session.get('admin_full_name', 'Admin')
+    )
+
+@app.route('/admin/reports/todays-collection')
+def admin_todays_collection():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    today = date.today()
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        # Get today's payments
+        cur.execute("""
+            SELECT p.*, bu.username as cashier_name
+            FROM payments p
+            LEFT JOIN billing_users bu ON p.recorded_by = bu.id
+            WHERE DATE(p.payment_date) = %s
+            ORDER BY p.created_at DESC
+        """, (today,))
+        
+        today_payments = cur.fetchall()
+        
+        # Calculate totals by payment method
+        payment_methods_data = {
+            'Cash': {'amount': 0, 'count': 0},
+            'Card': {'amount': 0, 'count': 0},
+            'Transfer': {'amount': 0, 'count': 0},
+            'POS': {'amount': 0, 'count': 0},
+            'Insurance': {'amount': 0, 'count': 0},
+            'Other': {'amount': 0, 'count': 0}
+        }
+        
+        # Process payments
+        total_transactions = len(today_payments)
+        grand_total = 0
+        amounts = []
+        
+        recent_transactions = []
+        for payment in today_payments:
+            amount_paid = float(payment[7])
+            payment_method = payment[9]
+            
+            # Add to grand total
+            grand_total += amount_paid
+            amounts.append(amount_paid)
+            
+            # Add to payment method totals
+            if payment_method in payment_methods_data:
+                payment_methods_data[payment_method]['amount'] += amount_paid
+                payment_methods_data[payment_method]['count'] += 1
+            else:
+                payment_methods_data['Other']['amount'] += amount_paid
+                payment_methods_data['Other']['count'] += 1
+            
+            # Prepare recent transactions data
+            recent_transactions.append({
+                'id': payment[0],
+                'patient_name': payment[1],
+                'service_type': payment[2],
+                'amount_paid': amount_paid,
+                'payment_method': payment_method,
+                'status': payment[10],
+                'created_at': payment[13],
+                'cashier_name': payment[14]
+            })
+        
+        # Calculate additional statistics
+        average_transaction = grand_total / total_transactions if total_transactions > 0 else 0
+        highest_transaction = max(amounts) if amounts else 0
+        lowest_transaction = min(amounts) if amounts else 0
+        
+        # Calculate totals for time periods
+        morning_total = 0  # 6AM - 12PM
+        afternoon_total = 0  # 12PM - 4PM
+        evening_total = 0  # 4PM - 10PM
+        
+        for payment in today_payments:
+            created_at = payment[13]
+            if created_at:
+                hour = created_at.hour
+                amount = float(payment[7])
+                
+                if 6 <= hour < 12:
+                    morning_total += amount
+                elif 12 <= hour < 16:
+                    afternoon_total += amount
+                elif 16 <= hour < 22:
+                    evening_total += amount
+        
+        # Prepare payment methods for template
+        payment_methods = []
+        for method_name, data in payment_methods_data.items():
+            if data['count'] > 0:  # Only include methods with transactions
+                percentage = (data['amount'] / grand_total * 100) if grand_total > 0 else 0
+                payment_methods.append({
+                    'name': method_name,
+                    'amount': data['amount'],
+                    'count': data['count'],
+                    'percentage': round(percentage, 1)
+                })
+        
+        # Get department-wise collection
+        cur.execute("""
+            SELECT 
+                p.service_type,
+                COUNT(*) as transaction_count,
+                SUM(p.amount_paid) as total_amount
+            FROM payments p
+            WHERE DATE(p.payment_date) = %s
+            GROUP BY p.service_type
+            ORDER BY total_amount DESC
+        """, (today,))
+        
+        service_type_data = cur.fetchall()
+        
+    except Exception as e:
+        app.logger.error(f"Error fetching today's collection: {e}")
+        today_payments = []
+        recent_transactions = []
+        total_transactions = 0
+        grand_total = 0
+        average_transaction = 0
+        highest_transaction = 0
+        lowest_transaction = 0
+        morning_total = afternoon_total = evening_total = 0
+        payment_methods = []
+        service_type_data = []
+        flash("Error loading today's collection report", "danger")
+    
+    cur.close()
+    conn.close()
+    
+    # Format date for display
+    today_date = today.strftime("%A, %B %d, %Y")
+    
+    return render_template(
+        "admin_todays_collection.html",
+        today_date=today_date,
+        grand_total=grand_total,
+        cash_total=payment_methods_data['Cash']['amount'],
+        card_total=payment_methods_data['Card']['amount'],
+        transfer_total=payment_methods_data['Transfer']['amount'],
+        pos_total=payment_methods_data['POS']['amount'],
+        insurance_total=payment_methods_data['Insurance']['amount'],
+        other_total=payment_methods_data['Other']['amount'],
+        payment_methods=payment_methods,
+        recent_transactions=recent_transactions,
+        total_transactions=total_transactions,
+        average_transaction=average_transaction,
+        highest_transaction=highest_transaction,
+        lowest_transaction=lowest_transaction,
+        morning_total=morning_total,
+        afternoon_total=afternoon_total,
+        evening_total=evening_total,
+        service_type_data=service_type_data,
+        admin_name=session.get('admin_full_name', 'Admin')
+    )
+
+# ==================== UPDATE MAIN FUNCTION ====================
+
 if __name__ == "__main__":
-    create_tables()  # Your existing tables
-    create_default_users()  # Your existing default users
-    create_hr_tables()  # Add this line for HR tables
+    create_tables()
+    create_default_users()
+    create_hr_tables()
+    create_default_admin()  # Add this line
     app.run(debug=True)
