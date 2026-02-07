@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pharmacy Revenue Report - Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        .nav-gradient { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .revenue-card { background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); }
+        .total-revenue { font-size: 2rem; font-weight: bold; color: #198754; }
+        .period-selector .btn.active { background-color: #667eea; color: white; }
+        .table-hover tbody tr:hover { background-color: rgba(0,0,0,0.02); }
+        .top-drugs .badge { font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark nav-gradient">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('admin_dashboard') }}">
+                <i class="bi bi-hospital"></i> All Saint Medical Center
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text me-3">
+                    <i class="bi bi-person-circle"></i> {{ admin_name }}
+                </span>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-house"></i> Dashboard
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3><i class="bi bi-currency-exchange"></i> Pharmacy Revenue Report</h3>
+                        <p class="text-muted mb-0">Analyze pharmacy sales and revenue trends</p>
+                    </div>
+                    <div>
+                        <button class="btn btn-success" onclick="printReport()">
+                            <i class="bi bi-printer"></i> Print Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Report Period Selection -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-calendar-range"></i> Select Report Period</h6>
+            </div>
+            <div class="card-body">
+                <form method="POST" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Report Type</label>
+                        <div class="period-selector btn-group" role="group">
+                            <button type="button" class="btn btn-outline-secondary {% if period == 'daily' %}active{% endif %}" 
+                                    onclick="selectPeriod('daily')">Daily</button>
+                            <button type="button" class="btn btn-outline-secondary {% if period == 'weekly' %}active{% endif %}" 
+                                    onclick="selectPeriod('weekly')">Weekly</button>
+                            <button type="button" class="btn btn-outline-secondary {% if period == 'monthly' %}active{% endif %}" 
+                                    onclick="selectPeriod('monthly')">Monthly</button>
+                        </div>
+                        <input type="hidden" name="period" id="period" value="{{ period }}">
+                    </div>
+                    
+                    <div class="col-md-3" id="daily-section" {% if period != 'daily' %}style="display:none;"{% endif %}>
+                        <label for="day" class="form-label">Select Date</label>
+                        <input type="date" class="form-control" id="day" name="day" 
+                               value="{% if selected_day %}{{ selected_day }}{% elif today_str %}{{ today_str }}{% endif %}">
+                    </div>
+                    
+                    <div class="col-md-3" id="month-section" {% if period != 'monthly' %}style="display:none;"{% endif %}>
+                        <label for="month" class="form-label">Select Month</label>
+                        <select class="form-select" id="month" name="month">
+                            {% for month_num, month_name in months %}
+                            <option value="{{ month_num }}" {% if selected_month == month_num %}selected{% endif %}>
+                                {{ month_name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3" id="year-section" {% if period not in ['monthly'] %}style="display:none;"{% endif %}>
+                        <label for="year" class="form-label">Select Year</label>
+                        <select class="form-select" id="year" name="year">
+                            {% for year in years %}
+                            <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>
+                                {{ year }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-search"></i> Generate Report
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Revenue Summary -->
+        <div class="card mb-4 revenue-card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5 class="mb-3">Revenue Summary</h5>
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="card bg-white mb-3">
+                                    <div class="card-body text-center">
+                                        <h6 class="text-muted">Total Revenue</h6>
+                                        <h3 class="total-revenue">₦{{ "%.2f"|format(total_revenue) }}</h3>
+                                        <small class="text-muted">{{ period|title }} Report</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="card bg-white mb-3">
+                                    <div class="card-body text-center">
+                                        <h6 class="text-muted">Avg Transaction</h6>
+                                        <h3 class="text-primary">₦{{ "%.2f"|format(avg_transaction) }}</h3>
+                                        <small class="text-muted">Per sale</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card bg-white">
+                            <div class="card-body">
+                                <h6><i class="bi bi-calendar-check"></i> Report Period</h6>
+                                <p class="mb-0">
+                                    <strong>{{ start_date.strftime('%B %d, %Y') }}</strong> 
+                                    {% if end_date != start_date %}
+                                    to <strong>{{ end_date.strftime('%B %d, %Y') }}</strong>
+                                    {% endif %}
+                                    <br>
+                                    <span class="text-muted">{{ sales|length }} transactions</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h5 class="mb-3">Top Selling Drugs</h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Drug Name</th>
+                                        <th>Strength</th>
+                                        <th>Quantity</th>
+                                        <th>Revenue</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for drug in top_drugs %}
+                                    <tr>
+                                        <td>{{ drug[0] }}</td>
+                                        <td>{{ drug[1] }}</td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ drug[2] }}</span>
+                                        </td>
+                                        <td><strong>₦{{ "%.2f"|format(drug[3]) }}</strong></td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted">
+                                            No drug sales data for this period
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Transactions -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-receipt"></i> Detailed Transactions</h6>
+            </div>
+            <div class="card-body">
+                {% if sales %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Receipt #</th>
+                                <th>Patient Name</th>
+                                <th>Patient ID</th>
+                                <th>Amount</th>
+                                <th>Pharmacist</th>
+                                <th>Date & Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for sale in sales %}
+                            <tr>
+                                <td><strong>#{{ sale[0] }}</strong></td>
+                                <td>{{ sale[1] or 'Walk-in Customer' }}</td>
+                                <td>
+                                    {% if sale[2] %}
+                                        <span class="badge bg-info">{{ sale[2] }}</span>
+                                    {% else %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td><strong>₦{{ "%.2f"|format(sale[3]) }}</strong></td>
+                                <td>{{ sale[5] or 'System' }}</td>
+                                <td>
+                                    {% if sale[4] %}
+                                        {{ sale[4].strftime('%Y-%m-%d %H:%M') }}
+                                    {% else %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-light">
+                                <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                                <td><strong class="total-revenue">₦{{ "%.2f"|format(total_revenue) }}</strong></td>
+                                <td colspan="2">{{ sales|length }} transactions</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-receipt display-6 text-muted mb-3"></i>
+                    <h5>No Sales Data Found</h5>
+                    <p class="text-muted">No pharmacy sales recorded for the selected period</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function selectPeriod(periodType) {
+            document.getElementById('period').value = periodType;
+            
+            // Show/hide relevant sections
+            document.getElementById('daily-section').style.display = periodType === 'daily' ? 'block' : 'none';
+            document.getElementById('month-section').style.display = periodType === 'monthly' ? 'block' : 'none';
+            document.getElementById('year-section').style.display = periodType === 'monthly' ? 'block' : 'none';
+            
+            // Update active buttons
+            document.querySelectorAll('.period-selector .btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        function printReport() {
+            window.print();
+        }
+
+        // Set today's date as default for daily reports
+        document.addEventListener('DOMContentLoaded', function() {
+            const dayInput = document.getElementById('day');
+            if (dayInput && !dayInput.value) {
+                const today = new Date().toISOString().split('T')[0];
+                dayInput.value = today;
+            }
+        });
+    </script>
+</body>
+</html>

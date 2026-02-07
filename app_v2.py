@@ -3777,9 +3777,12 @@ def admin_manage_cashiers():
     cursor = conn.cursor()
     
     try:
+        # Just show existing billing_users
         cursor.execute("""
-            SELECT id, username, full_name, email, is_active, created_at, last_login
-            FROM cashier_users 
+            SELECT id, username, username as full_name, 
+                   NULL as email, TRUE as is_active, 
+                   created_at, NULL as last_login
+            FROM billing_users 
             ORDER BY created_at DESC
         """)
         cashiers = cursor.fetchall()
@@ -3806,8 +3809,10 @@ def admin_manage_pharmacists():
     cursor = conn.cursor()
     
     try:
+        # Just show existing pharmacists
         cursor.execute("""
-            SELECT id, username, full_name, is_active, created_at
+            SELECT id, username, username as full_name,
+                   is_active, created_at
             FROM pharmacists 
             ORDER BY created_at DESC
         """)
@@ -3825,7 +3830,7 @@ def admin_manage_pharmacists():
         pharmacists=pharmacists,
         admin_name=session.get('admin_full_name', 'Admin')
     )
-
+    
 @app.route('/admin/users/toggle-status/<user_type>/<int:user_id>', methods=['POST'])
 def admin_toggle_user_status(user_type, user_id):
     if 'admin_id' not in session:
@@ -3959,15 +3964,33 @@ def admin_pharmacy_revenue():
     cur = conn.cursor()
     
     try:
-        # Get pharmacy sales
+        # First, check if pharmacist column exists in receipts table
         cur.execute("""
-            SELECT r.id, r.patient_name, r.patient_id, r.grand_total, 
-                   r.created_at, p.username as pharmacist
-            FROM receipts r
-            LEFT JOIN pharmacists p ON r.pharmacist = p.username
-            WHERE DATE(r.created_at) BETWEEN %s AND %s
-            ORDER BY r.created_at DESC
-        """, (start_date, end_date))
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name='receipts' AND column_name='pharmacist'
+        """)
+        
+        has_pharmacist_column = cur.fetchone() is not None
+        
+        # Get pharmacy sales - adjust query based on available columns
+        if has_pharmacist_column:
+            cur.execute("""
+                SELECT r.id, r.patient_name, r.patient_id, r.grand_total, 
+                       r.created_at, r.pharmacist
+                FROM receipts r
+                WHERE DATE(r.created_at) BETWEEN %s AND %s
+                ORDER BY r.created_at DESC
+            """, (start_date, end_date))
+        else:
+            cur.execute("""
+                SELECT r.id, r.patient_name, r.patient_id, r.grand_total, 
+                       r.created_at, 'System' as pharmacist
+                FROM receipts r
+                WHERE DATE(r.created_at) BETWEEN %s AND %s
+                ORDER BY r.created_at DESC
+            """, (start_date, end_date))
+        
         sales = cur.fetchall()
         
         # Get summary statistics
@@ -4031,9 +4054,10 @@ def admin_pharmacy_revenue():
         selected_year=int(selected_year) if selected_year else today.year,
         months=months,
         years=years,
+        today_str=today.strftime("%Y-%m-%d"),
         admin_name=session.get('admin_full_name', 'Admin')
     )
-
+        
 # ==================== BILLING REPORTS (Admin Access) ====================
 
 @app.route('/admin/reports/billing-payments')
@@ -4048,6 +4072,16 @@ def admin_billing_payments():
     status = request.args.get("status", "")
     start_date = request.args.get("start_date")
     end_date = request.args.get("end_date")
+    
+    # Create current_filters dict
+    current_filters = {
+        'patient_name': patient_name,
+        'service_type': service_type,
+        'payment_method': payment_method,
+        'status': status,
+        'start_date': start_date,
+        'end_date': end_date
+    }
     
     # Pagination
     page = request.args.get("page", 1, type=int)
@@ -4231,10 +4265,9 @@ def admin_billing_payments():
         stats=stats,
         page=page,
         total_pages=total_pages,
-        current_filters=request.args,
+        current_filters=current_filters,  # Add this line
         admin_name=session.get('admin_full_name', 'Admin')
     )
-
 @app.route('/admin/reports/todays-collection')
 def admin_todays_collection():
     if 'admin_id' not in session:
@@ -4373,6 +4406,7 @@ def admin_todays_collection():
     return render_template(
         "admin_todays_collection.html",
         today_date=today_date,
+        current_time=datetime.now().strftime("%H:%M:%S"),  # Add this line
         grand_total=grand_total,
         cash_total=payment_methods_data['Cash']['amount'],
         card_total=payment_methods_data['Card']['amount'],
@@ -4392,12 +4426,525 @@ def admin_todays_collection():
         service_type_data=service_type_data,
         admin_name=session.get('admin_full_name', 'Admin')
     )
+    
+    
+def sync_existing_users():
+    """Sync existing users from billing_users and pharmacists to new tables."""
+    conn = get_db_connection()
+    if not conn:
+        return
+    
+    cursor = conn.cursor()
+    
+    try:
+        # First, add missing columns if they don't exist
+        # Add full_name column to billing_users if it doesn't exist
+        try:
+            cursor.execute("ALTER TABLE billing_users ADD COLUMN IF NOT EXISTS full_name VARCHAR(100);")
+        except Exception as e:
+            app.logger.warning(f"Could not add full_name to billing_users: {e}")
+        
+        # Sync existing billing users to cashier_users
+        cursor.execute("""
+            INSERT INTO cashier_users (username, password, full_name, created_at)
+            SELECT bu.username, bu.password, 
+                   COALESCE(bu.full_name, bu.username) as full_name, 
+                   bu.created_at
+            FROM billing_users bu
+            WHERE NOT EXISTS (
+                SELECT 1 FROM cashier_users cu WHERE cu.username = bu.username
+            )
+            ON CONFLICT (username) DO NOTHING
+        """)
+        
+        # Sync existing pharmacists (ensure they have full_name field)
+        cursor.execute("""
+            UPDATE pharmacists 
+            SET full_name = username 
+            WHERE full_name IS NULL
+        """)
+        
+        conn.commit()
+        app.logger.info("Successfully synced existing users to new tables")
+        
+    except Exception as e:
+        conn.rollback()
+        app.logger.error(f"Error syncing existing users: {e}")
+    
+    finally:
+        cursor.close()
+        conn.close()
+        
+# ==================== ADMIN EXPORT ROUTES ====================
 
-# ==================== UPDATE MAIN FUNCTION ====================
+@app.route('/admin/reports/export/pharmacy-stock')
+def admin_export_pharmacy_stock():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    filter_type = request.args.get("filter", "all")
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        cur.execute("""
+            SELECT id, name, strength, stock_quantity, unit_price, 
+                   expiry_date, low_stock_threshold
+            FROM drugs
+            ORDER BY expiry_date ASC
+        """)
+        rows = cur.fetchall()
+        
+        stock = build_stock_snapshot(rows, date.today())
+        stock = apply_stock_filter(stock, filter_type)
+        
+        # Create Excel workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = f"Pharmacy Stock - {filter_type}"
+        
+        # Add headers
+        headers = [
+            "Drug Name", "Strength", "Quantity", "Unit Price (₦)",
+            "Expiry Date", "Days Left", "Status", "Total Value (₦)", "Low Stock Threshold"
+        ]
+        ws.append(headers)
+        
+        # Style headers
+        from openpyxl.styles import Font, PatternFill
+        for c in range(1, len(headers) + 1):
+            ws.cell(row=1, column=c).font = Font(bold=True)
+        
+        fills = {
+            "EXPIRED": PatternFill("solid", fgColor="FF9999"),
+            "EXPIRING_SOON": PatternFill("solid", fgColor="FFFF99"),
+            "LOW": PatternFill("solid", fgColor="ADD8E6")
+        }
+        
+        for item in stock:
+            ws.append([
+                item["name"], item["strength"], item["quantity"],
+                float(item["unit_price"]), item["expiry_date"],
+                item["days_left"], item["status"],
+                float(item["total_value"]), item["low_stock_threshold"]
+            ])
+            
+            row_idx = ws.max_row
+            if item["status"] in fills:
+                for col in range(1, len(headers) + 1):
+                    ws.cell(row=row_idx, column=col).fill = fills[item["status"]]
+            elif item["quantity"] <= item["low_stock_threshold"]:
+                for col in range(1, len(headers) + 1):
+                    ws.cell(row=row_idx, column=col).fill = fills["LOW"]
+        
+        # Add summary
+        ws.append([])
+        ws.append(["SUMMARY"])
+        ws.append(["Total Items:", len(stock)])
+        ws.append(["Total Stock Value:", f"₦{sum(d['total_value'] for d in stock):,.2f}"])
+        ws.append(["Expired Items:", sum(1 for d in stock if d["status"] == "EXPIRED")])
+        ws.append(["Expiring Soon:", sum(1 for d in stock if d["status"] == "EXPIRING_SOON")])
+        ws.append(["Low Stock:", sum(1 for d in stock if d["quantity"] <= d["low_stock_threshold"])])
+        
+        stream = io.BytesIO()
+        wb.save(stream)
+        stream.seek(0)
+        
+        # Log action
+        log_admin_action(session['admin_id'], 'EXPORT_REPORT', 
+                       f'Exported pharmacy stock report (filter: {filter_type})')
+        
+        return send_file(
+            stream,
+            as_attachment=True,
+            download_name=f"admin_pharmacy_stock_{date.today()}_{filter_type}.xlsx",
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+    except Exception as e:
+        app.logger.error(f"Error exporting pharmacy stock: {e}")
+        flash("Error exporting report", "danger")
+        return redirect(url_for('admin_pharmacy_stock'))
+        
+    finally:
+        cur.close()
+        conn.close()
 
+@app.route('/admin/reports/export/billing-payments')
+def admin_export_billing_payments():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    # Get filter parameters
+    patient_name = request.args.get("patient_name", "").strip()
+    service_type = request.args.get("service_type", "")
+    payment_method = request.args.get("payment_method", "")
+    status = request.args.get("status", "")
+    start_date = request.args.get("start_date")
+    end_date = request.args.get("end_date")
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        # Build query
+        query = """
+            SELECT p.*, bu.username as cashier_name
+            FROM payments p
+            LEFT JOIN billing_users bu ON p.recorded_by = bu.id
+            WHERE 1=1
+        """
+        params = []
+        
+        if patient_name:
+            query += " AND LOWER(p.patient_name) LIKE LOWER(%s)"
+            params.append(f"%{patient_name}%")
+        
+        if service_type:
+            query += " AND p.service_type = %s"
+            params.append(service_type)
+        
+        if payment_method:
+            query += " AND p.payment_method = %s"
+            params.append(payment_method)
+        
+        if status:
+            query += " AND p.status = %s"
+            params.append(status)
+        
+        if start_date:
+            query += " AND p.payment_date >= %s"
+            params.append(start_date)
+        
+        if end_date:
+            query += " AND p.payment_date <= %s"
+            params.append(end_date)
+        
+        query += " ORDER BY p.created_at DESC"
+        cur.execute(query, params)
+        payments = cur.fetchall()
+        
+        # Create Excel workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Billing Payments"
+        
+        # Add title
+        ws.append(["Billing Payments Report"])
+        ws.append([f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"])
+        ws.append([])
+        
+        # Add headers
+        headers = [
+            "Receipt No", "Patient Name", "Service Type", 
+            "Subtotal (₦)", "Discount (₦)", "Tax (₦)", "Grand Total (₦)",
+            "Amount Paid (₦)", "Balance (₦)", "Payment Method",
+            "Status", "Payment Date", "Created At", "Cashier"
+        ]
+        ws.append(headers)
+        
+        # Style headers
+        from openpyxl.styles import Font, PatternFill, Alignment
+        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+        header_font = Font(color="FFFFFF", bold=True)
+        
+        for cell in ws[4]:  # Headers are on row 4
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center")
+        
+        # Add data rows
+        for payment in payments:
+            ws.append([
+                payment[0],  # id
+                payment[1],  # patient_name
+                payment[2],  # service_type
+                float(payment[3]),  # subtotal
+                float(payment[4]),  # discount
+                float(payment[5]),  # tax
+                float(payment[6]),  # grand_total
+                float(payment[7]),  # amount_paid
+                float(payment[8]),  # balance
+                payment[9],  # payment_method
+                payment[10],  # status
+                payment[11],  # payment_date
+                payment[13],  # created_at
+                payment[14]   # cashier_name
+            ])
+        
+        # Auto-adjust column widths
+        for column in ws.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 30)
+            ws.column_dimensions[column_letter].width = adjusted_width
+        
+        # Add summary
+        total_amount = sum(float(p[7]) for p in payments) if payments else 0
+        total_balance = sum(float(p[8]) for p in payments) if payments else 0
+        
+        ws.append([])
+        ws.append(["SUMMARY"])
+        ws.append(["Total Transactions:", len(payments)])
+        ws.append(["Total Amount Collected:", total_amount])
+        ws.append(["Total Outstanding Balance:", total_balance])
+        
+        stream = io.BytesIO()
+        wb.save(stream)
+        stream.seek(0)
+        
+        # Log action
+        log_admin_action(session['admin_id'], 'EXPORT_REPORT', 
+                       f'Exported billing payments report')
+        
+        return send_file(
+            stream,
+            as_attachment=True,
+            download_name=f"admin_billing_payments_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+    except Exception as e:
+        app.logger.error(f"Error exporting billing payments: {e}")
+        flash("Error exporting report", "danger")
+        return redirect(url_for('admin_billing_payments'))
+        
+    finally:
+        cur.close()
+        conn.close()
+
+@app.route('/admin/reports/export/todays-collection')
+def admin_export_todays_collection():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    today = date.today()
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        # Get today's payments
+        cur.execute("""
+            SELECT p.*, bu.username as cashier_name
+            FROM payments p
+            LEFT JOIN billing_users bu ON p.recorded_by = bu.id
+            WHERE DATE(p.payment_date) = %s
+            ORDER BY p.created_at DESC
+        """, (today,))
+        
+        today_payments = cur.fetchall()
+        
+        # Create Excel workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = f"Today's Collection - {today}"
+        
+        # Add title
+        ws.append([f"Today's Collection Report - {today.strftime('%B %d, %Y')}"])
+        ws.append([f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"])
+        ws.append([])
+        
+        # Summary section
+        ws.append(["SUMMARY"])
+        ws.append([])
+        
+        # Calculate totals
+        grand_total = sum(float(p[7]) for p in today_payments) if today_payments else 0
+        total_transactions = len(today_payments)
+        
+        # Summary statistics
+        ws.append(["Date:", today.strftime('%A, %B %d, %Y')])
+        ws.append(["Total Transactions:", total_transactions])
+        ws.append(["Grand Total:", grand_total])
+        ws.append([])
+        
+        # Payment method breakdown
+        payment_methods_data = {
+            'Cash': {'amount': 0, 'count': 0},
+            'Card': {'amount': 0, 'count': 0},
+            'Transfer': {'amount': 0, 'count': 0},
+            'POS': {'amount': 0, 'count': 0},
+            'Insurance': {'amount': 0, 'count': 0},
+            'Other': {'amount': 0, 'count': 0}
+        }
+        
+        for payment in today_payments:
+            amount_paid = float(payment[7])
+            payment_method = payment[9]
+            
+            if payment_method in payment_methods_data:
+                payment_methods_data[payment_method]['amount'] += amount_paid
+                payment_methods_data[payment_method]['count'] += 1
+            else:
+                payment_methods_data['Other']['amount'] += amount_paid
+                payment_methods_data['Other']['count'] += 1
+        
+        ws.append(["Payment Method Breakdown"])
+        ws.append(["Method", "Count", "Amount", "Percentage"])
+        
+        for method_name, data in payment_methods_data.items():
+            if data['count'] > 0:
+                percentage = (data['amount'] / grand_total * 100) if grand_total > 0 else 0
+                ws.append([
+                    method_name,
+                    data['count'],
+                    data['amount'],
+                    f"{percentage:.1f}%"
+                ])
+        
+        ws.append([])
+        ws.append([])
+        
+        # Detailed transactions
+        ws.append(["DETAILED TRANSACTIONS"])
+        ws.append([])
+        
+        headers = [
+            "Receipt No", "Patient Name", "Service Type", 
+            "Subtotal", "Discount", "Tax", "Grand Total",
+            "Amount Paid", "Balance", "Payment Method",
+            "Status", "Payment Date", "Time", "Cashier"
+        ]
+        ws.append(headers)
+        
+        # Style headers
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+        header_font = Font(color="FFFFFF", bold=True)
+        border = Border(left=Side(style='thin'), 
+                       right=Side(style='thin'), 
+                       top=Side(style='thin'), 
+                       bottom=Side(style='thin'))
+        
+        for cell in ws[ws.max_row]:
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center")
+            cell.border = border
+        
+        # Add data rows
+        for payment in today_payments:
+            ws.append([
+                payment[0],  # id
+                payment[1],  # patient_name
+                payment[2],  # service_type
+                float(payment[3]),  # subtotal
+                float(payment[4]),  # discount
+                float(payment[5]),  # tax
+                float(payment[6]),  # grand_total
+                float(payment[7]),  # amount_paid
+                float(payment[8]),  # balance
+                payment[9],  # payment_method
+                payment[10],  # status
+                payment[11].strftime('%Y-%m-%d'),  # payment_date
+                payment[13].strftime('%H:%M:%S') if payment[13] else '',  # created_at time
+                payment[14]   # cashier_name
+            ])
+        
+        # Apply borders to data rows
+        data_start_row = ws.max_row - len(today_payments) + 1
+        for row in ws.iter_rows(min_row=data_start_row, max_row=ws.max_row):
+            for cell in row:
+                cell.border = border
+        
+        # Auto-adjust column widths
+        for column in ws.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 30)
+            ws.column_dimensions[column_letter].width = adjusted_width
+        
+        cur.close()
+        conn.close()
+        
+        # Save to BytesIO
+        stream = io.BytesIO()
+        wb.save(stream)
+        stream.seek(0)
+        
+        # Log action
+        log_admin_action(session['admin_id'], 'EXPORT_REPORT', 
+                       f'Exported today\'s collection report')
+        
+        return send_file(
+            stream,
+            as_attachment=True,
+            download_name=f"todays_collection_{today.strftime('%Y%m%d')}.xlsx",
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+    except Exception as e:
+        app.logger.error(f"Error exporting today's collection: {e}")
+        flash("Error exporting report", "danger")
+        return redirect(url_for('admin_todays_collection'))
+    
+def add_missing_columns():
+    """Add missing columns to existing tables."""
+    conn = get_db_connection()
+    if not conn:
+        return
+    
+    cursor = conn.cursor()
+    
+    try:
+        # Add full_name to billing_users if it doesn't exist
+        cursor.execute("""
+            DO $$ 
+            BEGIN
+                BEGIN
+                    ALTER TABLE billing_users ADD COLUMN full_name VARCHAR(100);
+                EXCEPTION
+                    WHEN duplicate_column THEN 
+                        -- Column already exists, do nothing
+                        NULL;
+                END;
+                
+                BEGIN
+                    ALTER TABLE receipts ADD COLUMN pharmacist VARCHAR(50);
+                EXCEPTION
+                    WHEN duplicate_column THEN 
+                        -- Column already exists, do nothing
+                        NULL;
+                END;
+            END $$;
+        """)
+        
+        # Update existing records
+        cursor.execute("UPDATE billing_users SET full_name = username WHERE full_name IS NULL;")
+        
+        conn.commit()
+        app.logger.info("Added missing columns to tables")
+        
+    except Exception as e:
+        conn.rollback()
+        app.logger.error(f"Error adding missing columns: {e}")
+    
+    finally:
+        cursor.close()
+        conn.close()
+
+# Update your main function to include this:
 if __name__ == "__main__":
     create_tables()
     create_default_users()
     create_hr_tables()
-    create_default_admin()  # Add this line
+    create_default_admin()
+    add_missing_columns()  # Add this before sync_existing_users
+    sync_existing_users()
     app.run(debug=True)
+
+
+

@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pharmacy Stock Report - Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        .badge-expired { background-color: #dc3545; }
+        .badge-expiring { background-color: #ffc107; color: #000; }
+        .badge-low { background-color: #0dcaf0; }
+        .badge-good { background-color: #198754; }
+        .nav-gradient { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .filter-btn.active { background-color: #667eea; color: white; }
+        .stock-table td { vertical-align: middle; }
+        .total-value { font-weight: bold; color: #198754; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark nav-gradient">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('admin_dashboard') }}">
+                <i class="bi bi-hospital"></i> All Saint Medical Center
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text me-3">
+                    <i class="bi bi-person-circle"></i> {{ admin_name }}
+                </span>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-house"></i> Dashboard
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3><i class="bi bi-boxes"></i> Pharmacy Stock Report</h3>
+                        <p class="text-muted mb-0">Monitor drug inventory, expiry dates, and stock levels</p>
+                    </div>
+                    <div>
+                        <a href="{{ url_for('admin_export_pharmacy_stock', filter=current_filter) }}" 
+                           class="btn btn-success">
+                            <i class="bi bi-file-excel"></i> Export to Excel
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Filters -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h6 class="card-title"><i class="bi bi-funnel"></i> Filter Stock</h6>
+                <div class="btn-group" role="group">
+                    <a href="{{ url_for('admin_pharmacy_stock', filter='all') }}" 
+                       class="btn btn-outline-secondary {% if current_filter == 'all' %}active{% endif %}">
+                        All Items ({{ total_items }})
+                    </a>
+                    <a href="{{ url_for('admin_pharmacy_stock', filter='low_stock') }}" 
+                       class="btn btn-outline-warning {% if current_filter == 'low_stock' %}active{% endif %}">
+                        Low Stock 
+                        <span class="badge bg-warning">
+                            {% if current_filter == 'low_stock' %}
+                                {{ filtered_items }}
+                            {% else %}
+                                0
+                            {% endif %}
+                        </span>
+                    </a>
+                    <a href="{{ url_for('admin_pharmacy_stock', filter='expiring_soon') }}" 
+                       class="btn btn-outline-info {% if current_filter == 'expiring_soon' %}active{% endif %}">
+                        Expiring Soon 
+                        <span class="badge bg-info">
+                            {% if current_filter == 'expiring_soon' %}
+                                {{ filtered_items }}
+                            {% else %}
+                                0
+                            {% endif %}
+                        </span>
+                    </a>
+                    <a href="{{ url_for('admin_pharmacy_stock', filter='expired') }}" 
+                       class="btn btn-outline-danger {% if current_filter == 'expired' %}active{% endif %}">
+                        Expired 
+                        <span class="badge bg-danger">
+                            {% if current_filter == 'expired' %}
+                                {{ filtered_items }}
+                            {% else %}
+                                0
+                            {% endif %}
+                        </span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card border-primary">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Total Items</h6>
+                        <h3>{{ total_items }}</h3>
+                        <small class="text-muted">{{ filtered_items }} filtered</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card border-success">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Stock Value</h6>
+                        <h3 class="total-value">₦{{ "%.2f"|format(total_stock_value) }}</h3>
+                        <small class="text-muted">Total inventory value</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card border-warning">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Low Stock</h6>
+                        <h3>
+                            {% set low_stock_count = 0 %}
+                            {% for item in stock %}
+                                {% if item.quantity <= item.low_stock_threshold %}
+                                    {% set low_stock_count = low_stock_count + 1 %}
+                                {% endif %}
+                            {% endfor %}
+                            {{ low_stock_count }}
+                        </h3>
+                        <small class="text-muted">Below threshold</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card border-danger">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Expiring Soon</h6>
+                        <h3>
+                            {% set expiring_soon_count = 0 %}
+                            {% for item in stock %}
+                                {% if item.status == 'EXPIRING_SOON' %}
+                                    {% set expiring_soon_count = expiring_soon_count + 1 %}
+                                {% endif %}
+                            {% endfor %}
+                            {{ expiring_soon_count }}
+                        </h3>
+                        <small class="text-muted">Within 30 days</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock Table -->
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover stock-table">
+                        <thead>
+                            <tr>
+                                <th>Drug Name</th>
+                                <th>Strength</th>
+                                <th>Quantity</th>
+                                <th>Unit Price</th>
+                                <th>Total Value</th>
+                                <th>Expiry Date</th>
+                                <th>Days Left</th>
+                                <th>Status</th>
+                                <th>Low Stock Threshold</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in stock %}
+                            <tr class="
+                                {% if item.status == 'EXPIRED' %}
+                                    table-danger
+                                {% elif item.status == 'EXPIRING_SOON' %}
+                                    table-warning
+                                {% elif item.quantity <= item.low_stock_threshold %}
+                                    table-info
+                                {% endif %}
+                            ">
+                                <td><strong>{{ item.name }}</strong></td>
+                                <td>{{ item.strength }}</td>
+                                <td>
+                                    <strong>{{ item.quantity }}</strong>
+                                    {% if item.quantity <= item.low_stock_threshold %}
+                                        <i class="bi bi-exclamation-triangle text-warning"></i>
+                                    {% endif %}
+                                </td>
+                                <td>₦{{ "%.2f"|format(item.unit_price) }}</td>
+                                <td class="total-value">₦{{ "%.2f"|format(item.total_value) }}</td>
+                                <td>{{ item.expiry_date }}</td>
+                                <td>
+                                    {% if item.days_left is not none %}
+                                        {% if item.days_left < 0 %}
+                                            <span class="text-danger">{{ item.days_left }} days</span>
+                                        {% elif item.days_left <= 30 %}
+                                            <span class="text-warning">{{ item.days_left }} days</span>
+                                        {% else %}
+                                            <span class="text-success">{{ item.days_left }} days</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.status == 'EXPIRED' %}
+                                        <span class="badge badge-expired">Expired</span>
+                                    {% elif item.status == 'EXPIRING_SOON' %}
+                                        <span class="badge badge-expiring">Expiring Soon</span>
+                                    {% elif item.quantity <= item.low_stock_threshold %}
+                                        <span class="badge badge-low">Low Stock</span>
+                                    {% else %}
+                                        <span class="badge badge-good">Good</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ item.low_stock_threshold }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="9" class="text-center text-muted py-4">
+                                    <i class="bi bi-box display-6 mb-3"></i>
+                                    <h5>No Stock Items Found</h5>
+                                    <p>No items match the current filter</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Summary Footer -->
+                {% if stock %}
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6><i class="bi bi-info-circle"></i> Legend</h6>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <span class="badge badge-expired">Expired</span>
+                                    <span class="badge badge-expiring">Expiring Soon (≤30 days)</span>
+                                    <span class="badge badge-low">Low Stock</span>
+                                    <span class="badge badge-good">Good Stock</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 text-end">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6>Current Filter Summary</h6>
+                                <p class="mb-0">
+                                    Showing <strong>{{ filtered_items }}</strong> of <strong>{{ total_items }}</strong> items<br>
+                                    Total Value: <strong class="total-value">₦{{ "%.2f"|format(total_stock_value) }}</strong>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Auto-refresh every 5 minutes
+        setTimeout(function() {
+            location.reload();
+        }, 300000); // 5 minutes
+
+        // Search functionality
+        const searchInput = document.createElement('input');
+        searchInput.className = 'form-control form-control-sm';
+        searchInput.placeholder = 'Search drugs...';
+        searchInput.style.maxWidth = '200px';
+        
+        // Add search box to the page
+        const searchContainer = document.createElement('div');
+        searchContainer.className = 'd-flex justify-content-end mb-3';
+        searchContainer.appendChild(searchInput);
+        
+        const cardBody = document.querySelector('.card-body:has(.btn-group)');
+        if (cardBody) {
+            cardBody.appendChild(searchContainer);
+        }
+        
+        searchInput.addEventListener('keyup', function() {
+            const searchTerm = this.value.toLowerCase();
+            const rows = document.querySelectorAll('.stock-table tbody tr');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        });
+    </script>
+</body>
+</html>

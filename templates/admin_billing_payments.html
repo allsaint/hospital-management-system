@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Billing Payments - Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        .nav-gradient { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .filter-card .card-body { padding-bottom: 0.5rem; }
+        .badge-paid { background-color: #198754; }
+        .badge-partial { background-color: #ffc107; color: #000; }
+        .badge-unpaid { background-color: #dc3545; }
+        .stats-card { border-left: 4px solid; }
+        .stats-card.total { border-color: #198754; }
+        .stats-card.avg { border-color: #0dcaf0; }
+        .stats-card.transactions { border-color: #6f42c1; }
+        .pagination .page-item.active .page-link { background-color: #667eea; border-color: #667eea; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark nav-gradient">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('admin_dashboard') }}">
+                <i class="bi bi-hospital"></i> All Saint Medical Center
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text me-3">
+                    <i class="bi bi-person-circle"></i> {{ admin_name }}
+                </span>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-house"></i> Dashboard
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3><i class="bi bi-receipt"></i> Billing Payment History</h3>
+                        <p class="text-muted mb-0">View and analyze all billing payments</p>
+                    </div>
+                    <div>
+                        {% set filters_dict = current_filters if current_filters else {} %}
+                        <a href="{{ url_for('admin_export_billing_payments', **filters_dict) }}" 
+                           class="btn btn-success">
+                            <i class="bi bi-file-excel"></i> Export to Excel
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Statistics -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card stats-card total">
+                    <div class="card-body">
+                        <h6 class="text-muted">Total Collected</h6>
+                        <h3>₦{{ "%.2f"|format(stats.total_collected) }}</h3>
+                        <small class="text-muted">{{ stats.total_transactions }} transactions</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card stats-card avg">
+                    <div class="card-body">
+                        <h6 class="text-muted">Average Payment</h6>
+                        <h3>₦{{ "%.2f"|format(stats.avg_payment) }}</h3>
+                        <small class="text-muted">Per transaction</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card stats-card transactions">
+                    <div class="card-body">
+                        <h6 class="text-muted">Payment Methods</h6>
+                        <h3>{{ stats.payment_methods_count }}</h3>
+                        <small class="text-muted">Different methods used</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <h6 class="text-muted">Payment Status</h6>
+                        <div class="d-flex justify-content-between">
+                            <span class="badge badge-paid">Paid: {{ stats.paid_count }}</span>
+                            <span class="badge badge-partial">Partial: {{ stats.partial_count }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="card mb-4 filter-card">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-funnel"></i> Filter Payments</h6>
+            </div>
+            <div class="card-body">
+                <form method="GET" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="patient_name" class="form-label">Patient Name</label>
+                        <input type="text" class="form-control" id="patient_name" name="patient_name" 
+                               value="{{ current_filters.patient_name if current_filters and current_filters.patient_name else '' }}" 
+                               placeholder="Search patient...">
+                    </div>
+                    <div class="col-md-2">
+                        <label for="service_type" class="form-label">Service Type</label>
+                        <select class="form-select" id="service_type" name="service_type">
+                            <option value="">All Services</option>
+                            {% for service in service_types %}
+                            <option value="{{ service }}" 
+                                {% if current_filters and current_filters.service_type == service %}selected{% endif %}>
+                                {{ service }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="payment_method" class="form-label">Payment Method</label>
+                        <select class="form-select" id="payment_method" name="payment_method">
+                            <option value="">All Methods</option>
+                            <option value="Cash" {% if current_filters and current_filters.payment_method == 'Cash' %}selected{% endif %}>Cash</option>
+                            <option value="Card" {% if current_filters and current_filters.payment_method == 'Card' %}selected{% endif %}>Card</option>
+                            <option value="Transfer" {% if current_filters and current_filters.payment_method == 'Transfer' %}selected{% endif %}>Transfer</option>
+                            <option value="POS" {% if current_filters and current_filters.payment_method == 'POS' %}selected{% endif %}>POS</option>
+                            <option value="Insurance" {% if current_filters and current_filters.payment_method == 'Insurance' %}selected{% endif %}>Insurance</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="status" class="form-label">Status</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="">All Status</option>
+                            <option value="Paid" {% if current_filters and current_filters.status == 'Paid' %}selected{% endif %}>Paid</option>
+                            <option value="Partial" {% if current_filters and current_filters.status == 'Partial' %}selected{% endif %}>Partial</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="date_range" class="form-label">Date Range</label>
+                        <div class="row g-2">
+                            <div class="col">
+                                <input type="date" class="form-control" id="start_date" name="start_date" 
+                                       value="{{ current_filters.start_date if current_filters and current_filters.start_date else '' }}">
+                            </div>
+                            <div class="col">
+                                <input type="date" class="form-control" id="end_date" name="end_date" 
+                                       value="{{ current_filters.end_date if current_filters and current_filters.end_date else '' }}">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="d-flex justify-content-between">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search"></i> Apply Filters
+                            </button>
+                            <a href="{{ url_for('admin_billing_payments') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Clear Filters
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Payments Table -->
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Receipt #</th>
+                                <th>Patient Name</th>
+                                <th>Service Type</th>
+                                <th>Amount Paid</th>
+                                <th>Balance</th>
+                                <th>Payment Method</th>
+                                <th>Status</th>
+                                <th>Cashier</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payment in payments %}
+                            <tr>
+                                <td><strong>#{{ payment.id }}</strong></td>
+                                <td>{{ payment.patient_name }}</td>
+                                <td>
+                                    <span class="badge bg-info">{{ payment.service_type }}</span>
+                                </td>
+                                <td>
+                                    <strong>₦{{ "%.2f"|format(payment.amount_paid) }}</strong>
+                                    <br>
+                                    <small class="text-muted">
+                                        Total: ₦{{ "%.2f"|format(payment.grand_total) }}
+                                    </small>
+                                </td>
+                                <td>
+                                    {% if payment.balance > 0 %}
+                                        <span class="badge badge-partial">₦{{ "%.2f"|format(payment.balance) }}</span>
+                                    {% else %}
+                                        <span class="badge badge-success">₦0.00</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge {% if payment.payment_method == 'Cash' %}bg-success
+                                                        {% elif payment.payment_method == 'Card' %}bg-primary
+                                                        {% elif payment.payment_method == 'Transfer' %}bg-info
+                                                        {% elif payment.payment_method == 'POS' %}bg-warning
+                                                        {% else %}bg-secondary{% endif %}">
+                                        {{ payment.payment_method }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if payment.status == 'Paid' %}
+                                        <span class="badge badge-paid">{{ payment.status }}</span>
+                                    {% elif payment.status == 'Partial' %}
+                                        <span class="badge badge-partial">{{ payment.status }}</span>
+                                    {% else %}
+                                        <span class="badge badge-unpaid">{{ payment.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ payment.cashier_name or 'System' }}</td>
+                                <td>{{ payment.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="9" class="text-center text-muted py-4">
+                                    <i class="bi bi-receipt display-6 mb-3"></i>
+                                    <h5>No Payment Records Found</h5>
+                                    <p>No payments match the current filters</p>
+                                    {% if current_filters %}
+                                    <a href="{{ url_for('admin_billing_payments') }}" class="btn btn-primary">
+                                        Clear Filters
+                                    </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-light">
+                                <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                                <td><strong>₦{{ "%.2f"|format(total_amount) }}</strong></td>
+                                <td colspan="5">{{ total_items }} records found</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                {% if total_pages > 1 %}
+                <nav aria-label="Page navigation" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                            <a class="page-link" 
+                               href="{{ url_for('admin_billing_payments', page=page-1, 
+                                    patient_name=current_filters.patient_name if current_filters else '',
+                                    service_type=current_filters.service_type if current_filters else '',
+                                    payment_method=current_filters.payment_method if current_filters else '',
+                                    status=current_filters.status if current_filters else '',
+                                    start_date=current_filters.start_date if current_filters else '',
+                                    end_date=current_filters.end_date if current_filters else '') }}">
+                                Previous
+                            </a>
+                        </li>
+                        
+                        {% for p in range(1, total_pages + 1) %}
+                            {% if p >= page-2 and p <= page+2 %}
+                            <li class="page-item {% if p == page %}active{% endif %}">
+                                <a class="page-link" 
+                                   href="{{ url_for('admin_billing_payments', page=p,
+                                        patient_name=current_filters.patient_name if current_filters else '',
+                                        service_type=current_filters.service_type if current_filters else '',
+                                        payment_method=current_filters.payment_method if current_filters else '',
+                                        status=current_filters.status if current_filters else '',
+                                        start_date=current_filters.start_date if current_filters else '',
+                                        end_date=current_filters.end_date if current_filters else '') }}">
+                                    {{ p }}
+                                </a>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                            <a class="page-link" 
+                               href="{{ url_for('admin_billing_payments', page=page+1,
+                                    patient_name=current_filters.patient_name if current_filters else '',
+                                    service_type=current_filters.service_type if current_filters else '',
+                                    payment_method=current_filters.payment_method if current_filters else '',
+                                    status=current_filters.status if current_filters else '',
+                                    start_date=current_filters.start_date if current_filters else '',
+                                    end_date=current_filters.end_date if current_filters else '') }}">
+                                Next
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+                {% endif %}
+
+                <div class="text-center text-muted mt-3">
+                    Showing {{ ((page-1)*20) + 1 }} to {{ min(page*20, total_items) }} of {{ total_items }} payments
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Set default date range to last 30 days if not set
+        const startDateInput = document.getElementById('start_date');
+        const endDateInput = document.getElementById('end_date');
+        
+        if (startDateInput && !startDateInput.value) {
+            const today = new Date();
+            const lastMonth = new Date(today);
+            lastMonth.setDate(today.getDate() - 30);
+            
+            startDateInput.value = lastMonth.toISOString().split('T')[0];
+            endDateInput.value = today.toISOString().split('T')[0];
+        }
+
+        // Quick date range buttons
+        const quickDateButtons = document.createElement('div');
+        quickDateButtons.className = 'd-flex gap-2 mt-2';
+        quickDateButtons.innerHTML = `
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setDateRange(7)">Last 7 Days</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setDateRange(30)">Last 30 Days</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setDateRange(90)">Last 90 Days</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setDateRange(365)">Last Year</button>
+        `;
+        document.querySelector('.card-body').appendChild(quickDateButtons);
+
+        function setDateRange(days) {
+            const today = new Date();
+            const startDate = new Date(today);
+            startDate.setDate(today.getDate() - days);
+            
+            startDateInput.value = startDate.toISOString().split('T')[0];
+            endDateInput.value = today.toISOString().split('T')[0];
+        }
+    </script>
+</body>
+</html>

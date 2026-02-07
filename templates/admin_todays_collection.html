@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Today's Collection - Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        .nav-gradient { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .today-card { background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); }
+        .grand-total { font-size: 2.5rem; font-weight: bold; color: #198754; }
+        .method-card { transition: transform 0.3s; }
+        .method-card:hover { transform: translateY(-5px); }
+        .method-card.cash { border-left: 4px solid #198754; }
+        .method-card.card { border-left: 4px solid #0dcaf0; }
+        .method-card.transfer { border-left: 4px solid #6f42c1; }
+        .method-card.pos { border-left: 4px solid #fd7e14; }
+        .method-card.insurance { border-left: 4px solid #20c997; }
+        .method-card.other { border-left: 4px solid #6c757d; }
+        .progress { height: 10px; }
+        .time-period .card { height: 100%; }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark nav-gradient">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('admin_dashboard') }}">
+                <i class="bi bi-hospital"></i> All Saint Medical Center
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text me-3">
+                    <i class="bi bi-person-circle"></i> {{ admin_name }}
+                </span>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-house"></i> Dashboard
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="today-card card">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h3><i class="bi bi-calendar-day"></i> Today's Collection</h3>
+                                <h5 class="text-muted">{{ today_date }}</h5>
+                                <p class="mb-0">
+                                    <i class="bi bi-clock"></i> Last updated: <span id="current-time">{{ current_time }}</span>
+                                </p>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <h2 class="grand-total">₦{{ "%.2f"|format(grand_total) }}</h2>
+                                <p class="text-muted mb-0">{{ total_transactions }} transactions today</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Quick Stats -->
+        <div class="row mb-4">
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Average Transaction</h6>
+                        <h3>₦{{ "%.2f"|format(average_transaction) }}</h3>
+                        <small class="text-muted">Per payment</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Highest Transaction</h6>
+                        <h3 class="text-success">₦{{ "%.2f"|format(highest_transaction) }}</h3>
+                        <small class="text-muted">Maximum today</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Lowest Transaction</h6>
+                        <h3 class="text-primary">₦{{ "%.2f"|format(lowest_transaction) }}</h3>
+                        <small class="text-muted">Minimum today</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted">Daily Target</h6>
+                        <h3 class="{% if grand_total >= daily_target %}text-success{% else %}text-warning{% endif %}">
+                            ₦{{ "%.2f"|format(daily_target) }}
+                        </h3>
+                        <div class="progress mt-2">
+                            <div class="progress-bar {% if grand_total >= daily_target %}bg-success{% else %}bg-warning{% endif %}" 
+                                 role="progressbar" 
+                                 style="width: {{ min(100, (grand_total/daily_target)*100) }}%">
+                            </div>
+                        </div>
+                        <small class="text-muted">{{ "%.1f"|format(min(100, (grand_total/daily_target)*100)) }}% achieved</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Methods Breakdown -->
+        <div class="row mb-4">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="bi bi-pie-chart"></i> Payment Method Breakdown</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            {% for method in payment_methods %}
+                            <div class="col-md-6 mb-3">
+                                <div class="card method-card {{ method.name|lower }}">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <h6 class="mb-1">{{ method.name }}</h6>
+                                                <h4 class="mb-0">₦{{ "%.2f"|format(method.amount) }}</h4>
+                                                <small class="text-muted">{{ method.count }} transactions</small>
+                                            </div>
+                                            <div class="text-end">
+                                                <div class="display-6">{{ method.percentage }}%</div>
+                                            </div>
+                                        </div>
+                                        <div class="progress mt-2">
+                                            <div class="progress-bar" 
+                                                 role="progressbar" 
+                                                 style="width: {{ method.percentage }}%">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="bi bi-clock-history"></i> Collection by Time Period</h6>
+                    </div>
+                    <div class="card-body time-period">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h6>Morning (6AM - 12PM)</h6>
+                                        <h3 class="text-primary">₦{{ "%.2f"|format(morning_total) }}</h3>
+                                        <small class="text-muted">
+                                            {{ "%.1f"|format((morning_total/grand_total)*100 if grand_total > 0 else 0) }}% of total
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h6>Afternoon (12PM - 4PM)</h6>
+                                        <h3 class="text-warning">₦{{ "%.2f"|format(afternoon_total) }}</h3>
+                                        <small class="text-muted">
+                                            {{ "%.1f"|format((afternoon_total/grand_total)*100 if grand_total > 0 else 0) }}% of total
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="card bg-light">
+                                    <div class="card-body text-center">
+                                        <h6>Evening (4PM - 10PM)</h6>
+                                        <h3 class="text-info">₦{{ "%.2f"|format(evening_total) }}</h3>
+                                        <small class="text-muted">
+                                            {{ "%.1f"|format((evening_total/grand_total)*100 if grand_total > 0 else 0) }}% of total
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Service Type Breakdown -->
+        {% if service_type_data %}
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="bi bi-briefcase"></i> Collection by Service Type</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Service Type</th>
+                                        <th>Transactions</th>
+                                        <th>Amount</th>
+                                        <th>Percentage</th>
+                                        <th>Progress</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for service in service_type_data %}
+                                    <tr>
+                                        <td><strong>{{ service[0] }}</strong></td>
+                                        <td>{{ service[1] }}</td>
+                                        <td>₦{{ "%.2f"|format(service[2]) }}</td>
+                                        <td>{{ "%.1f"|format((service[2]/grand_total)*100 if grand_total > 0 else 0) }}%</td>
+                                        <td>
+                                            <div class="progress" style="height: 8px;">
+                                                <div class="progress-bar" 
+                                                     role="progressbar" 
+                                                     style="width: {{ (service[2]/grand_total)*100 if grand_total > 0 else 0 }}%">
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Recent Transactions -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0"><i class="bi bi-clock-history"></i> Recent Transactions</h6>
+                        <a href="{{ url_for('admin_billing_payments') }}?start_date={{ date.today().strftime('%Y-%m-%d') }}&end_date={{ date.today().strftime('%Y-%m-%d') }}" 
+                           class="btn btn-sm btn-outline-primary">
+                            View All Today's Payments
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        {% if recent_transactions %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Receipt #</th>
+                                        <th>Patient Name</th>
+                                        <th>Service Type</th>
+                                        <th>Amount</th>
+                                        <th>Payment Method</th>
+                                        <th>Status</th>
+                                        <th>Cashier</th>
+                                        <th>Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for transaction in recent_transactions %}
+                                    <tr>
+                                        <td><strong>#{{ transaction.id }}</strong></td>
+                                        <td>{{ transaction.patient_name }}</td>
+                                        <td>
+                                            <span class="badge bg-info">{{ transaction.service_type }}</span>
+                                        </td>
+                                        <td><strong>₦{{ "%.2f"|format(transaction.amount_paid) }}</strong></td>
+                                        <td>
+                                            <span class="badge {% if transaction.payment_method == 'Cash' %}bg-success
+                                                        {% elif transaction.payment_method == 'Card' %}bg-primary
+                                                        {% elif transaction.payment_method == 'Transfer' %}bg-info
+                                                        {% elif transaction.payment_method == 'POS' %}bg-warning
+                                                        {% else %}bg-secondary{% endif %}">
+                                                {{ transaction.payment_method }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if transaction.status == 'Paid' %}
+                                                <span class="badge bg-success">Paid</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">{{ transaction.status }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ transaction.cashier_name or 'System' }}</td>
+                                        <td>
+                                            {% if transaction.created_at %}
+                                                {{ transaction.created_at.strftime('%H:%M:%S') }}
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-clock-history display-6 text-muted mb-3"></i>
+                            <h5>No Transactions Today</h5>
+                            <p class="text-muted">No billing transactions recorded for today yet</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Button -->
+        <div class="row mt-4">
+            <div class="col-12 text-center">
+                <a href="{{ url_for('admin_export_todays_collection') }}" class="btn btn-success btn-lg">
+                    <i class="bi bi-file-excel"></i> Export Today's Collection Report
+                </a>
+                <p class="text-muted mt-2">
+                    <i class="bi bi-info-circle"></i>
+                    Export includes detailed transaction data and summary statistics
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Auto-refresh every 2 minutes
+        setTimeout(function() {
+            location.reload();
+        }, 120000); // 2 minutes
+
+        // Update time display
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { 
+                hour12: true, 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            const timeElement = document.getElementById('current-time');
+            if (timeElement) {
+                timeElement.textContent = timeString;
+            }
+        }
+        
+        // Update time every second
+        setInterval(updateTime, 1000);
+        
+        // Initialize
+        updateTime();
+    </script>
+</body>
+</html>
