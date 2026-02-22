@@ -3,123 +3,196 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Login - All Saint Medical Center</title>
+    <title>Admin Login - {{ hospital_name }}</title>
+    
+    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <style>
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .login-container {
-            max-width: 400px;
-            width: 100%;
-            padding: 20px;
-        }
-        .login-card {
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            padding: 40px 30px;
-        }
-        .hospital-name {
-            color: #333;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        .hospital-location {
-            color: #666;
-            font-size: 0.9rem;
-            margin-bottom: 30px;
-        }
-        .login-icon {
-            color: #667eea;
-            margin-bottom: 20px;
-        }
-        .btn-login {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            color: white;
-            padding: 12px;
-            font-weight: 600;
-        }
-        .btn-login:hover {
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-        .form-control:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
-        }
-        .alert {
-            border-radius: 10px;
-        }
-    </style>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Custom Login CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
 </head>
-<body>
-    <div class="login-container">
-        <div class="login-card">
-            <div class="text-center">
-                <div class="login-icon">
-                    <i class="bi bi-shield-lock" style="font-size: 3rem;"></i>
-                </div>
-                <h4 class="hospital-name">All Saint Medical Center</h4>
-                <p class="hospital-location">Nsukka, Enugu State</p>
-                <h5 class="mb-4">Administrator Login</h5>
+<body class="login-page">
+    
+    <!-- Animated background elements -->
+    <div class="floating-shape shape-1"></div>
+    <div class="floating-shape shape-2"></div>
+    <div class="floating-shape shape-3"></div>
+    <div class="floating-shape shape-4"></div>
+    
+    <div class="login-wrapper">
+        <div class="login-container">
+            
+            <!-- Hospital Badge -->
+            <div class="hospital-badge">
+                <i class="bi bi-shield-check"></i>
             </div>
+            
+            <!-- Login Card -->
+            <div class="login-card">
+                
+                <!-- Header -->
+                <div class="login-header">
+                    <div class="icon-wrapper">
+                        <i class="bi bi-shield-lock"></i>
+                    </div>
+                    <h4 class="hospital-name">All Saint Medical Center</h4>
+                    <p class="hospital-location">Nsukka, Enugu State</p>
+                    <h5 class="login-title">Administrator Portal</h5>
+                    <p class="login-subtitle">Secure access for authorized personnel only</p>
+                </div>
 
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                <!-- Flash Messages -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                <i class="bi bi-{% if category == 'success' %}check-circle{% elif category == 'danger' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Login Form -->
+                <form method="POST" action="{{ url_for('admin_login') }}" class="login-form">
+                    
+                    <!-- Username Field -->
+                    <div class="form-group">
+                        <label for="username" class="form-label">
+                            <i class="bi bi-person-circle"></i>
+                            <span>Username</span>
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bi bi-person"></i>
+                            </span>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="username" 
+                                   name="username" 
+                                   placeholder="Enter your username" 
+                                   required
+                                   autocomplete="username"
+                                   autofocus>
                         </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
+                    </div>
 
-            <form method="POST" action="{{ url_for('admin_login') }}">
-                <div class="mb-3">
-                    <label for="username" class="form-label">
-                        <i class="bi bi-person-circle"></i> Username
-                    </label>
-                    <input type="text" class="form-control" id="username" name="username" 
-                           placeholder="Enter your username" required>
-                </div>
-                <div class="mb-4">
-                    <label for="password" class="form-label">
-                        <i class="bi bi-key"></i> Password
-                    </label>
-                    <input type="password" class="form-control" id="password" name="password" 
-                           placeholder="Enter your password" required>
-                </div>
-                <div class="d-grid">
-                    <button type="submit" class="btn btn-login btn-lg">
-                        <i class="bi bi-box-arrow-in-right"></i> Login as Admin
-                    </button>
-                </div>
-            </form>
+                    <!-- Password Field -->
+                    <div class="form-group">
+                        <label for="password" class="form-label">
+                            <i class="bi bi-key"></i>
+                            <span>Password</span>
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="bi bi-lock"></i>
+                            </span>
+                            <input type="password" 
+                                   class="form-control" 
+                                   id="password" 
+                                   name="password" 
+                                   placeholder="Enter your password" 
+                                   required
+                                   autocomplete="current-password">
+                            <button class="btn btn-outline-secondary toggle-password" 
+                                    type="button" 
+                                    onclick="togglePasswordVisibility()">
+                                <i class="bi bi-eye" id="togglePasswordIcon"></i>
+                            </button>
+                        </div>
+                    </div>
 
-            <div class="text-center mt-4">
-                <a href="{{ url_for('landing_page') }}" class="text-decoration-none">
-                    <i class="bi bi-arrow-left"></i> Back to Main Dashboard
-                </a>
+                    <!-- Remember Me & Forgot Password -->
+                    <div class="form-options">
+                        <div class="remember-me">
+                            <input type="checkbox" class="form-check-input" id="remember">
+                            <label class="form-check-label" for="remember">Remember me</label>
+                        </div>
+                        <a href="#" class="forgot-password" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">
+                            Forgot Password?
+                        </a>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-login">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>
+                            <span>Access Admin Dashboard</span>
+                        </button>
+                    </div>
+
+                    <!-- Security Notice -->
+                    <!-- <div class="security-notice">
+                        <i class="bi bi-shield-check"></i>
+                        <span>Secure login with 256-bit encryption</span>
+                    </div> -->
+                </form>
+
+                <!-- Footer Links -->
+                <div class="login-footer">
+                    <a href="{{ url_for('landing_page') }}" class="back-link">
+                        <i class="bi bi-arrow-left"></i>
+                        <span>Back to Main Dashboard</span>
+                    </a>
+                    
+                    <!-- <div class="help-link">
+                        <i class="bi bi-question-circle"></i>
+                        <span>Need help? Contact IT Support</span>
+                    </div> -->
+                </div>
+
+                <!-- Demo Credentials (Hidden by default) -->
+                <!-- <div class="demo-credentials">
+                    <small class="text-muted">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Demo: admin / admin123
+                    </small>
+                </div> -->
             </div>
 
-            <div class="mt-4 text-center text-muted">
-                <small>
-                    <i class="bi bi-info-circle"></i>
-                    Default credentials: admin / admin123
-                </small>
+            <!-- Footer Copyright -->
+            <div class="login-footer-copyright">
+                <p>&copy; 2026 {{ hospital_name }}. All rights reserved.</p>
             </div>
         </div>
     </div>
 
+    <!-- Forgot Password Modal -->
+    <div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-question-circle me-2"></i>
+                        Forgot Password
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Please contact the system administrator to reset your password:</p>
+                    <ul class="list-unstyled">
+                        <li><i class="bi bi-envelope me-2"></i> it.support@allsaintmedical.org</li>
+                        <li><i class="bi bi-telephone me-2"></i> +234 (0) 123 456 789</li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom Login JS -->
+    <script src="{{ url_for('static', filename='js/login.js') }}"></script>
 </body>
 </html>

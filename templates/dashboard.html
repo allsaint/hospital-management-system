@@ -11,162 +11,154 @@
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
     <!-- Custom Dashboard CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
 </head>
-
 <body>
 
-<!-- ================= HEADER ================= -->
-<header class="header">
-    <div class="container text-center">
-        <h1>{{ hospital_name }}</h1>
-        <!-- <p>Health for All</p> -->
+    <!-- ================= HEADER ================= -->
+    <header class="header">
+        <div class="container text-center">
+            <h1>{{ hospital_name }}</h1>
+            <p>Excellence in Healthcare • Compassion in Action</p>
+        </div>
+    </header>
+
+    <!-- ================= DASHBOARD MODULES ================= -->
+    <div class="container dashboard-container">
+        <div class="row g-4 justify-content-center">
+
+            <!-- Admin Card -->
+            <div class="col-12 col-sm-6 col-md-4 col-lg-4">
+                <a href="{{ url_for('admin_login') }}" class="text-decoration-none">
+                    <div class="card module-card h-100">
+                        <div class="card-body text-center">
+                            <i class="bi bi-shield-lock card-icon"></i>
+                            <h5 class="card-title mt-2">Admin</h5>
+                            <p class="card-text">System Administration & Security</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Billing & Revenue Card -->
+            <div class="col-12 col-sm-6 col-md-4 col-lg-4">
+                <a href="{{ url_for('billing_login') }}" class="text-decoration-none">
+                    <div class="card module-card h-100">
+                        <div class="card-body text-center">
+                            <i class="bi bi-receipt card-icon"></i>
+                            <h5 class="card-title mt-2">Billing & Revenue</h5>
+                            <p class="card-text">Financial Management & Invoicing</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Pharmacy Card -->
+            <div class="col-12 col-sm-6 col-md-4 col-lg-4">
+                <a href="{{ url_for('pharmacy_login') }}" class="text-decoration-none">
+                    <div class="card module-card h-100">
+                        <div class="card-body text-center">
+                            <i class="bi bi-capsule card-icon"></i>
+                            <h5 class="card-title mt-2">Pharmacy</h5>
+                            <p class="card-text">Medication Management & Inventory</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            {#
+            <!-- Commented out modules - keeping for future reference -->
+            
+            <!-- Patient Card -->
+            <div class="col-12 col-sm-6 col-md-4 col-lg-4">
+                <a href="{{ url_for('module_placeholder', module_name='patient') }}" class="text-decoration-none">
+                    <div class="card module-card h-100">
+                        <div class="card-body text-center">
+                            <i class="bi bi-people card-icon"></i>
+                            <h5 class="card-title mt-2">Patient</h5>
+                            <p class="card-text">Patient Records & Management</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Clinical Card -->
+            <div class="col-12 col-sm-6 col-md-4 col-lg-4">
+                <a href="{{ url_for('module_placeholder', module_name='clinical') }}" class="text-decoration-none">
+                    <div class="card module-card h-100">
+                        <div class="card-body text-center">
+                            <i class="bi bi-heart-pulse card-icon"></i>
+                            <h5 class="card-title mt-2">Clinical</h5>
+                            <p class="card-text">Clinical Documentation & Care</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Laboratory Card -->
+            <div class="col-12 col-sm-6 col-md-4 col-lg-4">
+                <a href="{{ url_for('module_placeholder', module_name='laboratory') }}" class="text-decoration-none">
+                    <div class="card module-card h-100">
+                        <div class="card-body text-center">
+                            <i class="bi bi-vial card-icon"></i>
+                            <h5 class="card-title mt-2">Laboratory</h5>
+                            <p class="card-text">Test Results & Lab Management</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Radiology Card -->
+            <div class="col-12 col-sm-6 col-md-4 col-lg-4">
+                <a href="{{ url_for('module_placeholder', module_name='radiology') }}" class="text-decoration-none">
+                    <div class="card module-card h-100">
+                        <div class="card-body text-center">
+                            <i class="bi bi-radioactive card-icon"></i>
+                            <h5 class="card-title mt-2">Radiology</h5>
+                            <p class="card-text">Imaging & Diagnostic Services</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Human Resources Card -->
+            <div class="col-12 col-sm-6 col-md-4 col-lg-4">
+                <a href="{{ url_for('hr_login') }}" class="text-decoration-none">
+                    <div class="card module-card h-100">
+                        <div class="card-body text-center">
+                            <i class="bi bi-person-badge card-icon"></i>
+                            <h5 class="card-title mt-2">Human Resources</h5>
+                            <p class="card-text">Staff Management & Payroll</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Management Card -->
+            <div class="col-12 col-sm-6 col-md-4 col-lg-4">
+                <a href="{{ url_for('module_placeholder', module_name='management') }}" class="text-decoration-none">
+                    <div class="card module-card h-100">
+                        <div class="card-body text-center">
+                            <i class="bi bi-bar-chart-line card-icon"></i>
+                            <h5 class="card-title mt-2">Management</h5>
+                            <p class="card-text">Analytics & Executive Dashboard</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            #}
+
+        </div>
     </div>
-</header>
 
-<!-- ================= DASHBOARD MODULES ================= -->
-<div class="container dashboard-container">
-    <div class="row g-4 justify-content-center">
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-        <!-- Admin Card -->
-        <div class="col-12 col-sm-6 col-md-4 col-lg-4">
-            <a href="{{ url_for('admin_login') }}"
-               class="text-decoration-none text-reset">
-                <div class="card module-card h-100">
-                    <div class="card-body text-center">
-                        <i class="bi bi-shield-lock card-icon"></i>
-                        <h5 class="card-title mt-2">Admin</h5>
-                        <p class="card-text">Access Admin</p>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <!-- Billing & Revenue Card -->
-        <div class="col-12 col-sm-6 col-md-4 col-lg-4">
-            <a href="{{ url_for('billing_login') }}"
-               class="text-decoration-none text-reset">
-                <div class="card module-card h-100">
-                    <div class="card-body text-center">
-                        <i class="bi bi-receipt card-icon"></i>
-                        <h5 class="card-title mt-2">Billing & Revenue</h5>
-                        <p class="card-text">Access Billing & Revenue</p>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <!-- Pharmacy Card -->
-        <div class="col-12 col-sm-6 col-md-4 col-lg-4">
-            <a href="{{ url_for('pharmacy_login') }}"
-               class="text-decoration-none text-reset">
-                <div class="card module-card h-100">
-                    <div class="card-body text-center">
-                        <i class="bi bi-capsule card-icon"></i>
-                        <h5 class="card-title mt-2">Pharmacy</h5>
-                        <p class="card-text">Access Pharmacy</p>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        {#
-        <!-- Commented out modules - keeping for future reference -->
-        
-        <!-- Patient Card -->
-        <div class="col-12 col-sm-6 col-md-4 col-lg-4">
-            <a href="{{ url_for('module_placeholder', module_name='patient') }}"
-               class="text-decoration-none text-reset">
-                <div class="card module-card h-100">
-                    <div class="card-body text-center">
-                        <i class="bi bi-people card-icon"></i>
-                        <h5 class="card-title mt-2">Patient</h5>
-                        <p class="card-text">Access Patient</p>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <!-- Clinical Card -->
-        <div class="col-12 col-sm-6 col-md-4 col-lg-4">
-            <a href="{{ url_for('module_placeholder', module_name='clinical') }}"
-               class="text-decoration-none text-reset">
-                <div class="card module-card h-100">
-                    <div class="card-body text-center">
-                        <i class="bi bi-heart-pulse card-icon"></i>
-                        <h5 class="card-title mt-2">Clinical</h5>
-                        <p class="card-text">Access Clinical</p>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <!-- Laboratory Card -->
-        <div class="col-12 col-sm-6 col-md-4 col-lg-4">
-            <a href="{{ url_for('module_placeholder', module_name='laboratory') }}"
-               class="text-decoration-none text-reset">
-                <div class="card module-card h-100">
-                    <div class="card-body text-center">
-                        <i class="bi bi-vial card-icon"></i>
-                        <h5 class="card-title mt-2">Laboratory</h5>
-                        <p class="card-text">Access Laboratory</p>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <!-- Radiology Card -->
-        <div class="col-12 col-sm-6 col-md-4 col-lg-4">
-            <a href="{{ url_for('module_placeholder', module_name='radiology') }}"
-               class="text-decoration-none text-reset">
-                <div class="card module-card h-100">
-                    <div class="card-body text-center">
-                        <i class="bi bi-radioactive card-icon"></i>
-                        <h5 class="card-title mt-2">Radiology</h5>
-                        <p class="card-text">Access Radiology</p>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <!-- Human Resources Card -->
-        <div class="col-12 col-sm-6 col-md-4 col-lg-4">
-            <a href="{{ url_for('hr_login') }}"
-               class="text-decoration-none text-reset">
-                <div class="card module-card h-100">
-                    <div class="card-body text-center">
-                        <i class="bi bi-person-badge card-icon"></i>
-                        <h5 class="card-title mt-2">Human Resources</h5>
-                        <p class="card-text">Access Human Resources</p>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <!-- Management Card -->
-        <div class="col-12 col-sm-6 col-md-4 col-lg-4">
-            <a href="{{ url_for('module_placeholder', module_name='management') }}"
-               class="text-decoration-none text-reset">
-                <div class="card module-card h-100">
-                    <div class="card-body text-center">
-                        <i class="bi bi-bar-chart-line card-icon"></i>
-                        <h5 class="card-title mt-2">Management</h5>
-                        <p class="card-text">Access Management</p>
-                    </div>
-                </div>
-            </a>
-        </div>
-        #}
-
-    </div>
-</div>
-
-<!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-
-<!-- Optional Dashboard JS -->
-<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
-
+    <!-- Optional Dashboard JS -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 </body>
 </html>

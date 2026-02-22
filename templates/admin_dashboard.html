@@ -4,75 +4,732 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - {{ hospital_name }}</title>
+    
+    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- AOS Animation Library -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    
     <style>
-        .stat-card {
-            border-radius: 10px;
-            transition: transform 0.3s;
-            border: none;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        /* ===== RESET & VARIABLES ===== */
+        :root {
+            --primary: #4361ee;
+            --primary-dark: #3a56d4;
+            --primary-light: #6c8cff;
+            --secondary: #7209b7;
+            --success: #06d6a0;
+            --warning: #ff9e00;
+            --danger: #ef476f;
+            --info: #00b4d8;
+            --dark: #0b0f1c;
+            --darker: #070b14;
+            --light: #f8f9ff;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1e293b;
+            --gray-900: #0f172a;
+            
+            --gradient-primary: linear-gradient(135deg, #4361ee 0%, #7209b7 100%);
+            --gradient-success: linear-gradient(135deg, #06d6a0 0%, #00b4d8 100%);
+            --gradient-warning: linear-gradient(135deg, #ff9e00 0%, #ef476f 100%);
+            --gradient-cool: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+            --shadow-2xl: 0 25px 50px -12px rgba(0,0,0,0.25);
+            --shadow-primary: 0 20px 40px -15px #4361ee;
+            
+            --border-radius: 12px;
+            --border-radius-lg: 16px;
+            --border-radius-xl: 24px;
         }
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .stat-icon {
-            font-size: 2.5rem;
-            opacity: 0.8;
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--gray-100);
+            color: var(--gray-800);
+            line-height: 1.6;
+            overflow-x: hidden;
         }
-        .bg-primary-light {
-            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-            border-left: 4px solid #2196f3;
+
+        /* ===== ANIMATIONS ===== */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        .bg-success-light {
-            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-            border-left: 4px solid #4caf50;
+
+        @keyframes slideIn {
+            from { transform: translateX(-20px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
-        .bg-warning-light {
-            background: linear-gradient(135deg, #fff3e0 0%, #ffccbc 100%);
-            border-left: 4px solid #ff9800;
+
+        @keyframes scaleIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
         }
-        .bg-danger-light {
-            background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
-            border-left: 4px solid #f44336;
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
         }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+
+        /* ===== NAVIGATION ===== */
+        .nav-gradient {
+            background: var(--gradient-primary);
+            padding: 0.75rem 1.5rem;
+            box-shadow: var(--shadow-lg);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.35rem;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: white !important;
+            transition: all 0.3s ease;
+        }
+
+        .navbar-brand:hover {
+            transform: translateY(-2px);
+            text-shadow: 0 2px 10px rgba(255,255,255,0.3);
+        }
+
+        .navbar-brand i {
+            font-size: 2rem;
+            filter: drop-shadow(0 2px 5px rgba(0,0,0,0.2));
+        }
+
+        .navbar-text {
+            color: rgba(255,255,255,0.95) !important;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .navbar-text i {
+            font-size: 1.25rem;
+        }
+
+        .btn-outline-light {
+            border-width: 2px;
+            font-weight: 600;
+            padding: 0.5rem 1.25rem;
+            border-radius: 30px;
+            transition: all 0.3s ease;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-outline-light:hover {
+            background: white;
+            color: var(--primary) !important;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* ===== SIDEBAR ===== */
         .sidebar {
-            background: #2c3e50;
-            min-height: calc(100vh - 56px);
+            background: linear-gradient(180deg, var(--gray-900) 0%, var(--dark) 100%);
+            min-height: calc(100vh - 72px);
+            box-shadow: var(--shadow-xl);
+            position: sticky;
+            top: 72px;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+            border-right: 1px solid rgba(255,255,255,0.1);
         }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.05);
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .sidebar .list-group {
+            padding: 1rem 0.75rem;
+        }
+
         .sidebar .list-group-item {
             background: transparent;
             border: none;
-            color: #ecf0f1;
-            border-radius: 0;
-        }
-        .sidebar .list-group-item:hover {
-            background: #34495e;
-        }
-        .sidebar .list-group-item.active {
-            background: #1abc9c;
-            border-color: #1abc9c;
-        }
-        .sidebar .list-group-item i {
-            width: 20px;
-            margin-right: 10px;
-        }
-        .nav-gradient {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        .quick-btn {
-            transition: all 0.3s;
-            border: none;
-            padding: 15px;
+            color: var(--gray-300);
+            padding: 0.875rem 1.25rem;
+            margin-bottom: 0.25rem;
+            border-radius: var(--border-radius);
+            transition: all 0.3s ease;
             font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
         }
+
+        .sidebar .list-group-item i {
+            width: 24px;
+            font-size: 1.25rem;
+            color: var(--gray-400);
+            transition: all 0.3s ease;
+        }
+
+        .sidebar .list-group-item:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .sidebar .list-group-item:hover i {
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .sidebar .list-group-item.active {
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            color: white;
+            box-shadow: var(--shadow-primary);
+            font-weight: 600;
+        }
+
+        .sidebar .list-group-item.active i {
+            color: white;
+        }
+
+        .sidebar .list-group-item[data-bs-toggle="collapse"] {
+            cursor: pointer;
+            position: relative;
+        }
+
+        .sidebar .list-group-item[data-bs-toggle="collapse"] .bi-chevron-down {
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar .list-group-item[data-bs-toggle="collapse"][aria-expanded="true"] .bi-chevron-down {
+            transform: rotate(180deg);
+        }
+
+        .collapse .list-group-item {
+            padding-left: 3.5rem !important;
+            font-size: 0.95rem;
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        .main-content {
+            padding: 2rem;
+            background: var(--gray-100);
+            min-height: calc(100vh - 72px);
+        }
+
+        /* ===== STATS CARDS ===== */
+        .stat-card {
+            border: none;
+            border-radius: var(--border-radius-xl);
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            z-index: 1;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            z-index: 2;
+        }
+
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: 1;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: var(--shadow-2xl);
+        }
+
+        .stat-card:hover::after {
+            opacity: 1;
+        }
+
+        .stat-card .card-body {
+            position: relative;
+            z-index: 2;
+            padding: 1.5rem;
+        }
+
+        .stat-card .stat-icon {
+            font-size: 3rem;
+            opacity: 0.9;
+            transition: all 0.4s ease;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));
+        }
+
+        .stat-card:hover .stat-icon {
+            transform: scale(1.1) rotate(5deg);
+            opacity: 1;
+        }
+
+        .stat-card h6 {
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card h3 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.25rem;
+            line-height: 1.2;
+        }
+
+        .stat-card small {
+            font-size: 0.875rem;
+            opacity: 0.8;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        /* Card color variations */
+        .bg-primary-light {
+            background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+        }
+
+        .bg-success-light {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        }
+
+        .bg-warning-light {
+            background: linear-gradient(135deg, #fef9c3 0%, #fef08a 100%);
+        }
+
+        .bg-danger-light {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        }
+
+        /* ===== QUICK ACTIONS ===== */
+        .quick-actions-card {
+            border: none;
+            border-radius: var(--border-radius-xl);
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            animation: slideIn 0.6s ease-out 0.2s both;
+        }
+
+        .quick-actions-card .card-header {
+            background: var(--gradient-primary);
+            color: white;
+            border: none;
+            padding: 1.25rem 1.5rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .quick-actions-card .card-header i {
+            font-size: 1.5rem;
+        }
+
+        .quick-actions-card .card-body {
+            padding: 1.5rem;
+            background: white;
+        }
+
+        .quick-btn {
+            border: none;
+            padding: 1rem;
+            font-weight: 600;
+            border-radius: var(--border-radius);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            border: 2px solid transparent;
+        }
+
+        .quick-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
         .quick-btn:hover {
             transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            box-shadow: var(--shadow-lg);
         }
-        .table-hover tbody tr:hover {
-            background-color: rgba(0,0,0,0.02);
+
+        .quick-btn:hover::before {
+            left: 100%;
+        }
+
+        .quick-btn:active {
+            transform: translateY(-1px);
+        }
+
+        .quick-btn i {
+            font-size: 1.25rem;
+            transition: transform 0.3s ease;
+        }
+
+        .quick-btn:hover i {
+            transform: scale(1.2);
+        }
+
+        /* Button colors */
+        .btn-primary {
+            background: var(--primary);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-success {
+            background: var(--success);
+            border: none;
+        }
+
+        .btn-warning {
+            background: var(--warning);
+            border: none;
+            color: white;
+        }
+
+        .btn-info {
+            background: var(--info);
+            border: none;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--gray-600);
+            border: none;
+        }
+
+        .btn-dark {
+            background: var(--gray-800);
+            border: none;
+        }
+
+        /* ===== ACTIVITY CARD ===== */
+        .activity-card {
+            border: none;
+            border-radius: var(--border-radius-xl);
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            animation: scaleIn 0.6s ease-out 0.4s both;
+        }
+
+        .activity-card .card-header {
+            background: white;
+            border-bottom: 2px solid var(--gray-200);
+            padding: 1.25rem 1.5rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .activity-card .card-header i {
+            color: var(--primary);
+            font-size: 1.5rem;
+        }
+
+        .activity-card .card-body {
+            padding: 0;
+        }
+
+        /* ===== TABLES ===== */
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table thead th {
+            background: var(--gray-100);
+            color: var(--gray-700);
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--gray-300);
+            padding: 1rem 1.5rem;
+        }
+
+        .table tbody td {
+            padding: 1rem 1.5rem;
+            vertical-align: middle;
+            border-bottom: 1px solid var(--gray-200);
+            color: var(--gray-700);
+        }
+
+        .table tbody tr {
+            transition: all 0.3s ease;
+        }
+
+        .table tbody tr:hover {
+            background: var(--gray-100) !important;
+            transform: scale(1.01);
+            box-shadow: var(--shadow-md);
+        }
+
+        .table tbody tr td:first-child {
+            font-weight: 500;
+        }
+
+        .table tbody tr td i {
+            color: var(--primary);
+            margin-right: 0.5rem;
+            font-size: 1.1rem;
+        }
+
+        /* ===== ALERTS ===== */
+        .alert {
+            border: none;
+            border-radius: var(--border-radius-lg);
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow-md);
+            animation: slideIn 0.3s ease;
+            border-left: 4px solid;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+            border-left-color: var(--success);
+        }
+
+        .alert-danger {
+            background: linear-gradient(135deg, #fee2e2, #fecaca);
+            border-left-color: var(--danger);
+        }
+
+        .alert-warning {
+            background: linear-gradient(135deg, #fef9c3, #fef08a);
+            border-left-color: var(--warning);
+        }
+
+        .alert-info {
+            background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+            border-left-color: var(--info);
+        }
+
+        /* ===== LOADING STATES ===== */
+        .loading {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: shimmer 2s infinite;
+            pointer-events: none;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 992px) {
+            .sidebar {
+                min-height: auto;
+                position: relative;
+                top: 0;
+            }
+            
+            .stat-card h3 {
+                font-size: 1.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .navbar-brand {
+                font-size: 1.1rem;
+            }
+            
+            .navbar-text {
+                padding: 0.25rem 0.75rem;
+                font-size: 0.9rem;
+            }
+            
+            .main-content {
+                padding: 1rem;
+            }
+            
+            .stat-card {
+                margin-bottom: 1rem;
+            }
+            
+            .quick-btn {
+                padding: 0.75rem;
+                font-size: 0.9rem;
+            }
+            
+            .table thead th,
+            .table tbody td {
+                padding: 0.75rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .navbar-brand span {
+                display: none;
+            }
+            
+            .stat-card h3 {
+                font-size: 1.25rem;
+            }
+            
+            .quick-actions-card .card-body .row > div {
+                margin-bottom: 0.5rem;
+            }
+        }
+
+        /* ===== CUSTOM SCROLLBAR ===== */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--gray-200);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--gray-500);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--gray-600);
+        }
+
+        /* ===== UTILITY CLASSES ===== */
+        .text-gradient {
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hover-lift {
+            transition: transform 0.3s ease;
+        }
+
+        .hover-lift:hover {
+            transform: translateY(-3px);
+        }
+
+        .hover-scale {
+            transition: transform 0.3s ease;
+        }
+
+        .hover-scale:hover {
+            transform: scale(1.05);
+        }
+
+        .animate-float {
+            animation: float 3s infinite;
+        }
+
+        .animate-pulse {
+            animation: pulse 2s infinite;
+        }
+
+        /* Current time display */
+        .current-time {
+            font-size: 0.875rem;
+            color: var(--gray-500);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--gray-100);
+            border-radius: 30px;
+            margin-top: 1rem;
+        }
+
+        .current-time i {
+            color: var(--primary);
         }
     </style>
 </head>
@@ -81,15 +738,23 @@
     <nav class="navbar navbar-expand-lg navbar-dark nav-gradient">
         <div class="container-fluid">
             <a class="navbar-brand" href="{{ url_for('admin_dashboard') }}">
-                <i class="bi bi-hospital"></i> {{ hospital_name }} - Admin Panel
+                <i class="bi bi-hospital"></i> 
+                <span>{{ hospital_name }}</span>
+                <span class="badge bg-white text-primary ms-2 animate-pulse">Admin</span>
             </a>
-            <div class="navbar-nav ms-auto">
-                <span class="navbar-text me-3">
-                    <i class="bi bi-person-circle"></i> {{ admin_name }}
-                </span>
-                <a href="{{ url_for('admin_logout') }}" class="btn btn-outline-light btn-sm">
-                    <i class="bi bi-box-arrow-right"></i> Logout
-                </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <div class="navbar-nav ms-auto">
+                    <div class="navbar-text me-3">
+                        <i class="bi bi-person-circle"></i>
+                        <span>{{ admin_name }}</span>
+                    </div>
+                    <a href="{{ url_for('admin_logout') }}" class="btn btn-outline-light btn-sm">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </a>
+                </div>
             </div>
         </div>
     </nav>
@@ -99,56 +764,65 @@
             <!-- Sidebar -->
             <div class="col-md-3 col-lg-2 px-0">
                 <div class="sidebar">
-                    <div class="list-group list-group-flush mt-3">
-                        <a href="{{ url_for('admin_dashboard') }}" class="list-group-item list-group-item-action active">
-                            <i class="bi bi-speedometer2"></i> Dashboard
+                    <div class="list-group list-group-flush">
+                        <a href="{{ url_for('admin_dashboard') }}" class="list-group-item active">
+                            <i class="bi bi-speedometer2"></i>
+                            <span>Dashboard</span>
                         </a>
                         
-                        <div class="list-group-item list-group-item-action" data-bs-toggle="collapse" href="#userManagement">
-                            <i class="bi bi-people"></i> User Management
+                        <div class="list-group-item" data-bs-toggle="collapse" href="#userManagement" role="button" aria-expanded="true">
+                            <i class="bi bi-people"></i>
+                            <span>User Management</span>
                             <i class="bi bi-chevron-down float-end"></i>
                         </div>
                         <div class="collapse show" id="userManagement">
-                            <a href="{{ url_for('admin_manage_admins') }}" class="list-group-item list-group-item-action ps-4">
+                            <a href="{{ url_for('admin_manage_admins') }}" class="list-group-item ps-5">
                                 <i class="bi bi-shield-check"></i> Admin Accounts
                             </a>
-                            <a href="{{ url_for('admin_manage_cashiers') }}" class="list-group-item list-group-item-action ps-4">
+                            <a href="{{ url_for('admin_manage_cashiers') }}" class="list-group-item ps-5">
                                 <i class="bi bi-cash-coin"></i> Cashier Accounts
                             </a>
-                            <a href="{{ url_for('admin_manage_pharmacists') }}" class="list-group-item list-group-item-action ps-4">
+                            <a href="{{ url_for('admin_manage_pharmacists') }}" class="list-group-item ps-5">
                                 <i class="bi bi-capsule"></i> Pharmacist Accounts
                             </a>
                         </div>
                         
-                        <div class="list-group-item list-group-item-action" data-bs-toggle="collapse" href="#reports">
-                            <i class="bi bi-bar-chart"></i> Reports
+                        <div class="list-group-item" data-bs-toggle="collapse" href="#reports" role="button" aria-expanded="true">
+                            <i class="bi bi-bar-chart"></i>
+                            <span>Reports</span>
                             <i class="bi bi-chevron-down float-end"></i>
                         </div>
                         <div class="collapse show" id="reports">
-                            <a href="{{ url_for('admin_pharmacy_stock') }}" class="list-group-item list-group-item-action ps-4">
+                            <a href="{{ url_for('admin_pharmacy_stock') }}" class="list-group-item ps-5">
                                 <i class="bi bi-boxes"></i> Pharmacy Stock
                             </a>
-                            <a href="{{ url_for('admin_pharmacy_revenue') }}" class="list-group-item list-group-item-action ps-4">
+                            <a href="{{ url_for('admin_pharmacy_revenue') }}" class="list-group-item ps-5">
                                 <i class="bi bi-currency-exchange"></i> Pharmacy Revenue
                             </a>
-                            <a href="{{ url_for('admin_billing_payments') }}" class="list-group-item list-group-item-action ps-4">
+                            <a href="{{ url_for('admin_billing_payments') }}" class="list-group-item ps-5">
                                 <i class="bi bi-receipt"></i> Billing Payments
                             </a>
-                            <a href="{{ url_for('admin_todays_collection') }}" class="list-group-item list-group-item-action ps-4">
+                            <a href="{{ url_for('admin_todays_collection') }}" class="list-group-item ps-5">
                                 <i class="bi bi-calendar-day"></i> Today's Collection
                             </a>
                         </div>
+                    </div>
+                    
+                    <div class="current-time mx-3">
+                        <i class="bi bi-clock"></i>
+                        <span id="currentDateTime"></span>
                     </div>
                 </div>
             </div>
 
             <!-- Main Content -->
-            <div class="col-md-9 col-lg-10 py-4">
+            <div class="col-md-9 col-lg-10 main-content">
                 <!-- Flash Messages -->
                 {% with messages = get_flashed_messages(with_categories=true) %}
                     {% if messages %}
                         {% for category, message in messages %}
                             <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                <i class="bi bi-{% if category == 'success' %}check-circle-fill{% elif category == 'danger' %}exclamation-triangle-fill{% else %}info-circle-fill{% endif %} me-2"></i>
                                 {{ message }}
                                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                             </div>
@@ -156,16 +830,29 @@
                     {% endif %}
                 {% endwith %}
 
+                <!-- Page Title -->
+                <div class="d-flex justify-content-between align-items-center mb-4" data-aos="fade-down">
+                    <h2 class="fw-bold">
+                        <i class="bi bi-grid-3x3-gap-fill me-2 text-primary"></i>
+                        Dashboard Overview
+                    </h2>
+                    <button class="btn btn-outline-primary" onclick="location.reload()">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                </div>
+
                 <!-- Dashboard Stats -->
-                <div class="row mb-4">
-                    <div class="col-md-3 col-sm-6 mb-3">
+                <div class="row g-4 mb-4">
+                    <div class="col-md-3 col-sm-6" data-aos="fade-up" data-aos-delay="100">
                         <div class="card stat-card bg-primary-light">
                             <div class="card-body">
-                                <div class="d-flex justify-content-between">
+                                <div class="d-flex justify-content-between align-items-start">
                                     <div>
-                                        <h6 class="text-muted">Today's Collection</h6>
-                                        <h3>₦{{ "%.2f"|format(stats.todays_collection) }}</h3>
-                                        <small class="text-muted">Billing Revenue</small>
+                                        <h6 class="text-primary">Today's Collection</h6>
+                                        <h3 class="text-primary">₦{{ "%.2f"|format(stats.todays_collection) }}</h3>
+                                        <small class="text-primary">
+                                            <i class="bi bi-arrow-up"></i> +12.5% from yesterday
+                                        </small>
                                     </div>
                                     <div class="stat-icon text-primary">
                                         <i class="bi bi-cash-stack"></i>
@@ -175,14 +862,16 @@
                         </div>
                     </div>
                     
-                    <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="col-md-3 col-sm-6" data-aos="fade-up" data-aos-delay="200">
                         <div class="card stat-card bg-success-light">
                             <div class="card-body">
-                                <div class="d-flex justify-content-between">
+                                <div class="d-flex justify-content-between align-items-start">
                                     <div>
-                                        <h6 class="text-muted">Pharmacy Revenue</h6>
-                                        <h3>₦{{ "%.2f"|format(stats.pharmacy_revenue) }}</h3>
-                                        <small class="text-muted">{{ stats.pharmacy_sales_count }} sales today</small>
+                                        <h6 class="text-success">Pharmacy Revenue</h6>
+                                        <h3 class="text-success">₦{{ "%.2f"|format(stats.pharmacy_revenue) }}</h3>
+                                        <small class="text-success">
+                                            <i class="bi bi-graph-up"></i> {{ stats.pharmacy_sales_count }} sales today
+                                        </small>
                                     </div>
                                     <div class="stat-icon text-success">
                                         <i class="bi bi-currency-exchange"></i>
@@ -192,14 +881,16 @@
                         </div>
                     </div>
                     
-                    <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="col-md-3 col-sm-6" data-aos="fade-up" data-aos-delay="300">
                         <div class="card stat-card bg-warning-light">
                             <div class="card-body">
-                                <div class="d-flex justify-content-between">
+                                <div class="d-flex justify-content-between align-items-start">
                                     <div>
-                                        <h6 class="text-muted">Staff Accounts</h6>
-                                        <h3>{{ stats.admins_count + stats.cashiers_count + stats.pharmacists_count }}</h3>
-                                        <small class="text-muted">Total users</small>
+                                        <h6 class="text-warning">Staff Accounts</h6>
+                                        <h3 class="text-warning">{{ stats.admins_count + stats.cashiers_count + stats.pharmacists_count }}</h3>
+                                        <small class="text-warning">
+                                            <i class="bi bi-person-check"></i> Total users
+                                        </small>
                                     </div>
                                     <div class="stat-icon text-warning">
                                         <i class="bi bi-people-fill"></i>
@@ -209,14 +900,17 @@
                         </div>
                     </div>
                     
-                    <div class="col-md-3 col-sm-6 mb-3">
+                    <div class="col-md-3 col-sm-6" data-aos="fade-up" data-aos-delay="400">
                         <div class="card stat-card bg-danger-light">
                             <div class="card-body">
-                                <div class="d-flex justify-content-between">
+                                <div class="d-flex justify-content-between align-items-start">
                                     <div>
-                                        <h6 class="text-muted">Stock Alerts</h6>
-                                        <h3>{{ stats.low_stock_count + stats.expired_stock_count }}</h3>
-                                        <small class="text-muted">Low: {{ stats.low_stock_count }}, Expired: {{ stats.expired_stock_count }}</small>
+                                        <h6 class="text-danger">Stock Alerts</h6>
+                                        <h3 class="text-danger">{{ stats.low_stock_count + stats.expired_stock_count }}</h3>
+                                        <div>
+                                            <span class="badge bg-warning me-1">Low: {{ stats.low_stock_count }}</span>
+                                            <span class="badge bg-danger">Expired: {{ stats.expired_stock_count }}</span>
+                                        </div>
                                     </div>
                                     <div class="stat-icon text-danger">
                                         <i class="bi bi-exclamation-triangle"></i>
@@ -228,67 +922,74 @@
                 </div>
 
                 <!-- Quick Actions -->
-                <div class="row mb-4">
+                <!-- <div class="row mb-4" data-aos="fade-up" data-aos-delay="500">
                     <div class="col-12">
-                        <div class="card">
-                            <div class="card-header bg-primary text-white">
-                                <i class="bi bi-lightning-charge"></i> Quick Actions
+                        <div class="quick-actions-card">
+                            <div class="card-header">
+                                <i class="bi bi-lightning-charge-fill"></i>
+                                <span>Quick Actions</span>
                             </div>
                             <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-4 mb-2">
-                                        <a href="{{ url_for('admin_create_admin') }}" class="btn btn-primary w-100 quick-btn">
-                                            <i class="bi bi-person-plus"></i> Add Admin User
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <a href="{{ url_for('admin_create_admin') }}" class="quick-btn btn btn-primary w-100">
+                                            <i class="bi bi-person-plus"></i>
+                                            <span>Add Admin</span>
                                         </a>
                                     </div>
-                                    <div class="col-md-4 mb-2">
-                                        <a href="{{ url_for('admin_create_cashier') }}" class="btn btn-success w-100 quick-btn">
-                                            <i class="bi bi-cash-coin"></i> Add Cashier
+                                    <div class="col-md-4">
+                                        <a href="{{ url_for('admin_create_cashier') }}" class="quick-btn btn btn-success w-100">
+                                            <i class="bi bi-cash-coin"></i>
+                                            <span>Add Cashier</span>
                                         </a>
                                     </div>
-                                    <div class="col-md-4 mb-2">
-                                        <a href="{{ url_for('admin_create_pharmacist') }}" class="btn btn-warning w-100 quick-btn">
-                                            <i class="bi bi-capsule"></i> Add Pharmacist
+                                    <div class="col-md-4">
+                                        <a href="{{ url_for('admin_create_pharmacist') }}" class="quick-btn btn btn-warning w-100">
+                                            <i class="bi bi-capsule"></i>
+                                            <span>Add Pharmacist</span>
                                         </a>
                                     </div>
-                                </div>
-                                <div class="row mt-2">
-                                    <div class="col-md-4 mb-2">
-                                        <a href="{{ url_for('admin_todays_collection') }}" class="btn btn-info w-100 quick-btn">
-                                            <i class="bi bi-calendar-day"></i> View Today's Collection
+                                    <div class="col-md-4">
+                                        <a href="{{ url_for('admin_todays_collection') }}" class="quick-btn btn btn-info w-100">
+                                            <i class="bi bi-calendar-day"></i>
+                                            <span>Today's Collection</span>
                                         </a>
                                     </div>
-                                    <div class="col-md-4 mb-2">
-                                        <a href="{{ url_for('admin_pharmacy_stock') }}" class="btn btn-secondary w-100 quick-btn">
-                                            <i class="bi bi-boxes"></i> Check Pharmacy Stock
+                                    <div class="col-md-4">
+                                        <a href="{{ url_for('admin_pharmacy_stock') }}" class="quick-btn btn btn-secondary w-100">
+                                            <i class="bi bi-boxes"></i>
+                                            <span>Check Stock</span>
                                         </a>
                                     </div>
-                                    <div class="col-md-4 mb-2">
-                                        <a href="{{ url_for('admin_billing_payments') }}" class="btn btn-dark w-100 quick-btn">
-                                            <i class="bi bi-receipt"></i> View Payment History
+                                    <div class="col-md-4">
+                                        <a href="{{ url_for('admin_billing_payments') }}" class="quick-btn btn btn-dark w-100">
+                                            <i class="bi bi-receipt"></i>
+                                            <span>Payment History</span>
                                         </a>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                </div> -->
 
                 <!-- Recent Activity -->
-                <div class="row">
+                <div class="row" data-aos="fade-up" data-aos-delay="600">
                     <div class="col-12">
-                        <div class="card">
+                        <div class="activity-card">
                             <div class="card-header">
-                                <i class="bi bi-clock-history"></i> Recent Admin Activity
+                                <i class="bi bi-clock-history"></i>
+                                <span>Recent Admin Activity</span>
                             </div>
                             <div class="card-body">
                                 <div class="table-responsive">
                                     <table class="table table-hover">
-                                        <thead class="table-light">
+                                        <thead>
                                             <tr>
                                                 <th>Admin</th>
                                                 <th>Action</th>
                                                 <th>Time</th>
+                                                <th>Status</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -296,16 +997,29 @@
                                                 {% for action in stats.recent_actions %}
                                                 <tr>
                                                     <td>
-                                                        <i class="bi bi-person-circle"></i> {{ action[0] }}
+                                                        <i class="bi bi-person-circle text-primary"></i>
+                                                        <span class="fw-medium">{{ action[0] }}</span>
                                                     </td>
                                                     <td>{{ action[1] }}</td>
-                                                    <td>{{ action[2].strftime('%Y-%m-%d %H:%M') }}</td>
+                                                    <td>
+                                                        <span class="badge bg-light text-dark">
+                                                            <i class="bi bi-clock me-1"></i>
+                                                            {{ action[2].strftime('%H:%M') }}
+                                                        </span>
+                                                        <small class="text-muted ms-2">{{ action[2].strftime('%Y-%m-%d') }}</small>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge bg-success">
+                                                            <i class="bi bi-check-circle"></i> Completed
+                                                        </span>
+                                                    </td>
                                                 </tr>
                                                 {% endfor %}
                                             {% else %}
                                                 <tr>
-                                                    <td colspan="3" class="text-center text-muted">
-                                                        No recent activity
+                                                    <td colspan="4" class="text-center py-5">
+                                                        <i class="bi bi-inbox fs-1 text-muted d-block mb-3"></i>
+                                                        <p class="text-muted mb-0">No recent activity found</p>
                                                     </td>
                                                 </tr>
                                             {% endif %}
@@ -320,8 +1034,18 @@
         </div>
     </div>
 
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    
     <script>
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50
+        });
+
         // Auto-close alerts after 5 seconds
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(function() {
@@ -331,6 +1055,74 @@
                     bsAlert.close();
                 });
             }, 5000);
+
+            // Update current time
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+        });
+
+        // Update date and time
+        function updateDateTime() {
+            const now = new Date();
+            const options = {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            };
+            
+            const dateTimeElement = document.getElementById('currentDateTime');
+            if (dateTimeElement) {
+                dateTimeElement.textContent = now.toLocaleString('en-US', options);
+            }
+        }
+
+        // Add loading state to quick action buttons
+        document.querySelectorAll('.quick-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                if (this.classList.contains('loading')) return;
+                
+                this.classList.add('loading');
+                setTimeout(() => {
+                    this.classList.remove('loading');
+                }, 1000);
+            });
+        });
+
+        // Handle sidebar collapse state
+        document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(element => {
+            element.addEventListener('click', function() {
+                const icon = this.querySelector('.bi-chevron-down');
+                if (icon) {
+                    icon.style.transform = this.getAttribute('aria-expanded') === 'true' 
+                        ? 'rotate(180deg)' 
+                        : 'rotate(0deg)';
+                }
+            });
+        });
+
+        // Add hover effect to table rows
+        document.querySelectorAll('.table tbody tr').forEach(row => {
+            row.addEventListener('mouseenter', function() {
+                this.style.backgroundColor = 'var(--gray-100)';
+            });
+            
+            row.addEventListener('mouseleave', function() {
+                this.style.backgroundColor = '';
+            });
+        });
+
+        // Smooth scroll to top
+        document.querySelector('.btn-outline-primary')?.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+            setTimeout(() => location.reload(), 500);
         });
     </script>
 </body>

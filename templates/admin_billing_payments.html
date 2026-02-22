@@ -316,7 +316,7 @@
                 {% endif %}
 
                 <div class="text-center text-muted mt-3">
-                    Showing {{ ((page-1)*20) + 1 }} to {{ min(page*20, total_items) }} of {{ total_items }} payments
+                    Showing {{ ((page-1)*20) + 1 }} to {{ page*20 if page*20 <= total_items else total_items }} of {{ total_items }} payments
                 </div>
             </div>
         </div>

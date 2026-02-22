@@ -12,6 +12,7 @@ import bcrypt
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 
+
 # -------------------- FLASK APP SETUP --------------------
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "super_secret_key_change_later")
@@ -173,6 +174,27 @@ def create_tables():
     conn.commit()
     cursor.close()
     conn.close()
+
+# Make Python built-in functions and modules available in templates
+@app.context_processor
+def utility_processor():
+    from datetime import date, datetime, timedelta
+    return dict(
+        # Built-in functions
+        min=min,
+        max=max,
+        abs=abs,
+        round=round,
+        len=len,
+        range=range,
+        int=int,
+        float=float,
+        str=str,
+        # Date/time modules
+        date=date,
+        datetime=datetime,
+        timedelta=timedelta
+    )
 
 def create_default_users():
     """Create default users for pharmacy and billing modules."""
@@ -4290,24 +4312,24 @@ def admin_todays_collection():
         
         today_payments = cur.fetchall()
         
-        # Calculate totals by payment method
+        # Calculate totals by payment method - CONVERT TO FLOAT
         payment_methods_data = {
-            'Cash': {'amount': 0, 'count': 0},
-            'Card': {'amount': 0, 'count': 0},
-            'Transfer': {'amount': 0, 'count': 0},
-            'POS': {'amount': 0, 'count': 0},
-            'Insurance': {'amount': 0, 'count': 0},
-            'Other': {'amount': 0, 'count': 0}
+            'Cash': {'amount': 0.0, 'count': 0},
+            'Card': {'amount': 0.0, 'count': 0},
+            'Transfer': {'amount': 0.0, 'count': 0},
+            'POS': {'amount': 0.0, 'count': 0},
+            'Insurance': {'amount': 0.0, 'count': 0},
+            'Other': {'amount': 0.0, 'count': 0}
         }
         
-        # Process payments
+        # Process payments - CONVERT TO FLOAT
         total_transactions = len(today_payments)
-        grand_total = 0
+        grand_total = 0.0
         amounts = []
         
         recent_transactions = []
         for payment in today_payments:
-            amount_paid = float(payment[7])
+            amount_paid = float(payment[7])  # Convert to float
             payment_method = payment[9]
             
             # Add to grand total
@@ -4322,33 +4344,33 @@ def admin_todays_collection():
                 payment_methods_data['Other']['amount'] += amount_paid
                 payment_methods_data['Other']['count'] += 1
             
-            # Prepare recent transactions data
+            # Prepare recent transactions data - CONVERT TO FLOAT
             recent_transactions.append({
                 'id': payment[0],
                 'patient_name': payment[1],
                 'service_type': payment[2],
-                'amount_paid': amount_paid,
+                'amount_paid': amount_paid,  # Already float
                 'payment_method': payment_method,
                 'status': payment[10],
                 'created_at': payment[13],
                 'cashier_name': payment[14]
             })
         
-        # Calculate additional statistics
-        average_transaction = grand_total / total_transactions if total_transactions > 0 else 0
-        highest_transaction = max(amounts) if amounts else 0
-        lowest_transaction = min(amounts) if amounts else 0
+        # Calculate additional statistics - CONVERT TO FLOAT
+        average_transaction = grand_total / total_transactions if total_transactions > 0 else 0.0
+        highest_transaction = max(amounts) if amounts else 0.0
+        lowest_transaction = min(amounts) if amounts else 0.0
         
-        # Calculate totals for time periods
-        morning_total = 0  # 6AM - 12PM
-        afternoon_total = 0  # 12PM - 4PM
-        evening_total = 0  # 4PM - 10PM
+        # Calculate totals for time periods - CONVERT TO FLOAT
+        morning_total = 0.0  # 6AM - 12PM
+        afternoon_total = 0.0  # 12PM - 4PM
+        evening_total = 0.0  # 4PM - 10PM
         
         for payment in today_payments:
             created_at = payment[13]
             if created_at:
                 hour = created_at.hour
-                amount = float(payment[7])
+                amount = float(payment[7])  # Convert to float
                 
                 if 6 <= hour < 12:
                     morning_total += amount
@@ -4357,19 +4379,19 @@ def admin_todays_collection():
                 elif 16 <= hour < 22:
                     evening_total += amount
         
-        # Prepare payment methods for template
+        # Prepare payment methods for template - CONVERT TO FLOAT
         payment_methods = []
         for method_name, data in payment_methods_data.items():
             if data['count'] > 0:  # Only include methods with transactions
                 percentage = (data['amount'] / grand_total * 100) if grand_total > 0 else 0
                 payment_methods.append({
                     'name': method_name,
-                    'amount': data['amount'],
+                    'amount': data['amount'],  # Already float
                     'count': data['count'],
                     'percentage': round(percentage, 1)
                 })
         
-        # Get department-wise collection
+        # Get department-wise collection - CONVERT TO FLOAT
         cur.execute("""
             SELECT 
                 p.service_type,
@@ -4381,20 +4403,35 @@ def admin_todays_collection():
             ORDER BY total_amount DESC
         """, (today,))
         
-        service_type_data = cur.fetchall()
+        service_type_rows = cur.fetchall()
+        service_type_data = []
+        for row in service_type_rows:
+            service_type_data.append({
+                'service_type': row[0],
+                'transaction_count': row[1],
+                'total_amount': float(row[2]) if row[2] else 0.0  # Convert to float
+            })
+        
+        # Calculate progress percentage
+        daily_target = 500000.00
+        if daily_target > 0:
+            progress_percentage = min(100, (grand_total / daily_target * 100))
+        else:
+            progress_percentage = 0
         
     except Exception as e:
         app.logger.error(f"Error fetching today's collection: {e}")
         today_payments = []
         recent_transactions = []
         total_transactions = 0
-        grand_total = 0
-        average_transaction = 0
-        highest_transaction = 0
-        lowest_transaction = 0
-        morning_total = afternoon_total = evening_total = 0
+        grand_total = 0.0
+        average_transaction = 0.0
+        highest_transaction = 0.0
+        lowest_transaction = 0.0
+        morning_total = afternoon_total = evening_total = 0.0
         payment_methods = []
         service_type_data = []
+        progress_percentage = 0
         flash("Error loading today's collection report", "danger")
     
     cur.close()
@@ -4406,7 +4443,7 @@ def admin_todays_collection():
     return render_template(
         "admin_todays_collection.html",
         today_date=today_date,
-        current_time=datetime.now().strftime("%H:%M:%S"),  # Add this line
+        current_time=datetime.now().strftime("%H:%M:%S"),
         grand_total=grand_total,
         cash_total=payment_methods_data['Cash']['amount'],
         card_total=payment_methods_data['Card']['amount'],
@@ -4424,9 +4461,10 @@ def admin_todays_collection():
         afternoon_total=afternoon_total,
         evening_total=evening_total,
         service_type_data=service_type_data,
-        admin_name=session.get('admin_full_name', 'Admin')
+        admin_name=session.get('admin_full_name', 'Admin'),
+        daily_target=daily_target,
+        progress_percentage=progress_percentage  # Add this for the template
     )
-    
     
 def sync_existing_users():
     """Sync existing users from billing_users and pharmacists to new tables."""

@@ -3,35 +3,664 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Admins - Admin Panel</title>
+    <title>Manage Admins - Admin Panel | All Saint Medical Center</title>
+    
+    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- AOS Animation Library -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    
+    <!-- DataTables -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    
     <style>
-        .table th {
-            background-color: #f8f9fa;
+        /* ===== RESET & VARIABLES ===== */
+        :root {
+            --primary: #4361ee;
+            --primary-dark: #3a56d4;
+            --primary-light: #6c8cff;
+            --secondary: #7209b7;
+            --success: #06d6a0;
+            --warning: #ff9e00;
+            --danger: #ef476f;
+            --info: #00b4d8;
+            --purple: #7209b7;
+            --dark: #0b0f1c;
+            --darker: #070b14;
+            --light: #f8f9ff;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1e293b;
+            --gray-900: #0f172a;
+            
+            --gradient-primary: linear-gradient(135deg, #4361ee 0%, #7209b7 100%);
+            --gradient-success: linear-gradient(135deg, #06d6a0 0%, #00b4d8 100%);
+            --gradient-warning: linear-gradient(135deg, #ff9e00 0%, #ef476f 100%);
+            
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+            --shadow-2xl: 0 25px 50px -12px rgba(0,0,0,0.25);
+            --shadow-primary: 0 20px 40px -15px #4361ee;
+            
+            --border-radius: 12px;
+            --border-radius-lg: 16px;
+            --border-radius-xl: 24px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e6ecf5 100%);
+            color: var(--gray-800);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(67, 97, 238, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(114, 9, 183, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(239, 71, 111, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 90% 20%, rgba(6, 214, 160, 0.03) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+            animation: gradientShift 15s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* ===== ANIMATIONS ===== */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideInLeft {
+            from { transform: translateX(-30px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(30px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes scaleIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        /* ===== NAVIGATION ===== */
+        .nav-gradient {
+            background: var(--gradient-primary);
+            padding: 0.75rem 1.5rem;
+            box-shadow: var(--shadow-lg);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            animation: slideInLeft 0.5s ease-out;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.35rem;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: white !important;
+            transition: all 0.3s ease;
+        }
+
+        .navbar-brand:hover {
+            transform: translateY(-2px);
+            text-shadow: 0 2px 10px rgba(255,255,255,0.3);
+        }
+
+        .navbar-brand i {
+            font-size: 2rem;
+            filter: drop-shadow(0 2px 5px rgba(0,0,0,0.2));
+            animation: float 3s infinite;
+        }
+
+        .navbar-text {
+            color: rgba(255,255,255,0.95) !important;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .navbar-text i {
+            font-size: 1.25rem;
+        }
+
+        .btn-outline-light {
+            border-width: 2px;
             font-weight: 600;
+            padding: 0.5rem 1.25rem;
+            border-radius: 30px;
+            transition: all 0.3s ease;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
         }
+
+        .btn-outline-light:hover {
+            background: white;
+            color: var(--primary) !important;
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* ===== PAGE HEADER ===== */
+        .page-header {
+            margin-bottom: 2rem;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        .page-header h3 {
+            font-weight: 800;
+            color: var(--gray-800);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .page-header h3 i {
+            color: var(--primary);
+            font-size: 2rem;
+            animation: float 3s infinite;
+        }
+
+        .page-header p {
+            color: var(--gray-500);
+            margin-left: 3rem;
+        }
+
+        .btn-add {
+            background: var(--gradient-primary);
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 30px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-primary);
+            animation: pulse 2s infinite;
+        }
+
+        .btn-add:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: var(--shadow-2xl);
+            color: white;
+        }
+
+        .btn-add i {
+            font-size: 1.25rem;
+        }
+
+        /* ===== SEARCH & FILTER ===== */
+        .search-filter-card {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-lg);
+            animation: slideInRight 0.8s ease-out;
+            border: 1px solid rgba(255,255,255,0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        .search-box {
+            border: 2px solid var(--gray-200);
+            border-radius: 30px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .search-box:focus-within {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.15);
+        }
+
+        .search-box .input-group-text {
+            background: white;
+            border: none;
+            color: var(--gray-500);
+        }
+
+        .search-box .form-control {
+            border: none;
+            padding: 0.75rem 0;
+            font-size: 1rem;
+        }
+
+        .search-box .form-control:focus {
+            box-shadow: none;
+        }
+
+        .filter-dropdown {
+            border: 2px solid var(--gray-200);
+            border-radius: 30px;
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            color: var(--gray-700);
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .filter-dropdown:hover {
+            border-color: var(--primary);
+            background: var(--gray-100);
+        }
+
+        .filter-dropdown .dropdown-toggle {
+            background: transparent;
+            border: none;
+            color: var(--gray-700);
+            padding: 0;
+            font-weight: 500;
+        }
+
+        .filter-dropdown .dropdown-toggle:focus {
+            box-shadow: none;
+        }
+
+        .filter-dropdown .dropdown-menu {
+            border: none;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-xl);
+            padding: 0.5rem;
+        }
+
+        .filter-dropdown .dropdown-item {
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .filter-dropdown .dropdown-item:hover {
+            background: var(--gray-100);
+            transform: translateX(5px);
+        }
+
+        .filter-dropdown .dropdown-item.active {
+            background: var(--gradient-primary);
+            color: white;
+        }
+
+        /* ===== TABLE STYLES ===== */
+        .table-card {
+            background: white;
+            border-radius: var(--border-radius-xl);
+            overflow: hidden;
+            box-shadow: var(--shadow-2xl);
+            animation: scaleIn 0.8s ease-out;
+            border: 1px solid rgba(255,255,255,0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table thead th {
+            background: var(--gradient-primary);
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 1.25rem 1rem;
+            border: none;
+            white-space: nowrap;
+        }
+
+        .table thead th:first-child {
+            border-radius: 0 0 0 0;
+        }
+
+        .table thead th:last-child {
+            border-radius: 0 0 0 0;
+        }
+
+        .table tbody tr {
+            transition: all 0.3s ease;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .table tbody tr:hover {
+            background: var(--gray-100);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .table tbody td {
+            padding: 1rem;
+            vertical-align: middle;
+            color: var(--gray-700);
+            font-size: 0.95rem;
+        }
+
+        .table tbody td:first-child {
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        /* Badges */
+        .badge {
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+            font-size: 0.85rem;
+            border-radius: 30px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
         .badge-active {
-            background-color: #198754;
+            background: linear-gradient(135deg, #06d6a0, #00b4d8);
+            color: white;
         }
+
         .badge-inactive {
-            background-color: #dc3545;
+            background: linear-gradient(135deg, #ef476f, #ff9e00);
+            color: white;
         }
+
         .badge-super {
-            background-color: #6f42c1;
+            background: linear-gradient(135deg, #7209b7, #b5179e);
+            color: white;
         }
+
+        .badge-regular {
+            background: var(--gray-200);
+            color: var(--gray-700);
+        }
+
+        /* Action Buttons */
         .action-btn {
             width: 36px;
             height: 36px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            border-radius: 10px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            margin: 0 2px;
         }
-        .search-box {
-            max-width: 300px;
+
+        .btn-outline-success {
+            border-color: var(--success);
+            color: var(--success);
         }
-        .nav-gradient {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+        .btn-outline-success:hover {
+            background: var(--success);
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(6, 214, 160, 0.4);
+        }
+
+        .btn-outline-danger {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        .btn-outline-danger:hover {
+            background: var(--danger);
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(239, 71, 111, 0.4);
+        }
+
+        .btn-outline-info {
+            border-color: var(--info);
+            color: var(--info);
+        }
+
+        .btn-outline-info:hover {
+            background: var(--info);
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 180, 216, 0.4);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--gray-500);
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            color: var(--gray-400);
+            margin-bottom: 1rem;
+            animation: float 3s infinite;
+        }
+
+        .empty-state h5 {
+            font-weight: 700;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state p {
+            margin-bottom: 1.5rem;
+        }
+
+        /* ===== STATS CARDS ===== */
+        .stats-row {
+            margin-top: 2rem;
+            gap: 1rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-lg);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.5);
+            backdrop-filter: blur(10px);
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-2xl);
+        }
+
+        .stat-card.border-primary { border-left: 4px solid var(--primary); }
+        .stat-card.border-success { border-left: 4px solid var(--success); }
+        .stat-card.border-warning { border-left: 4px solid var(--warning); }
+        .stat-card.border-purple { border-left: 4px solid var(--purple); }
+
+        .stat-card h6 {
+            color: var(--gray-500);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card h3 {
+            font-weight: 800;
+            font-size: 2rem;
+            margin-bottom: 0;
+            color: var(--gray-900);
+        }
+
+        /* ===== ALERTS ===== */
+        .alert {
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            animation: slideInRight 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            border-left: 4px solid;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+            border-left-color: var(--success);
+        }
+
+        .alert-danger {
+            background: linear-gradient(135deg, #fee2e2, #fecaca);
+            border-left-color: var(--danger);
+        }
+
+        .alert-warning {
+            background: linear-gradient(135deg, #fef9c3, #fef08a);
+            border-left-color: var(--warning);
+        }
+
+        .alert-info {
+            background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+            border-left-color: var(--info);
+        }
+
+        /* ===== LOADING STATES ===== */
+        .loading {
+            position: relative;
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .page-header h3 {
+                font-size: 1.5rem;
+            }
+            
+            .page-header p {
+                margin-left: 0;
+            }
+            
+            .search-filter-card .row {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .stat-card {
+                margin-bottom: 1rem;
+            }
+            
+            .table thead th {
+                font-size: 0.8rem;
+                padding: 1rem 0.75rem;
+            }
+            
+            .table tbody td {
+                padding: 0.75rem;
+                font-size: 0.85rem;
+            }
+            
+            .action-btn {
+                width: 32px;
+                height: 32px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .btn-add {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .stats-row .col-md-3 {
+                width: 50%;
+            }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--gray-200);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
         }
     </style>
 </head>
@@ -40,11 +669,14 @@
     <nav class="navbar navbar-expand-lg navbar-dark nav-gradient">
         <div class="container-fluid">
             <a class="navbar-brand" href="{{ url_for('admin_dashboard') }}">
-                <i class="bi bi-hospital"></i> All Saint Medical Center
+                <i class="bi bi-hospital"></i> 
+                <span>All Saint Medical Center</span>
+                <span class="badge bg-white text-primary ms-2 animate-pulse">Admin</span>
             </a>
             <div class="navbar-nav ms-auto">
                 <span class="navbar-text me-3">
-                    <i class="bi bi-person-circle"></i> {{ admin_name }}
+                    <i class="bi bi-person-circle"></i>
+                    <span>{{ admin_name }}</span>
                 </span>
                 <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-light btn-sm">
                     <i class="bi bi-house"></i> Dashboard
@@ -54,26 +686,31 @@
     </nav>
 
     <div class="container-fluid py-4">
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h3><i class="bi bi-shield-check"></i> Admin User Management</h3>
-                        <p class="text-muted mb-0">Manage system administrators and their permissions</p>
-                    </div>
-                    <div>
-                        <a href="{{ url_for('admin_create_admin') }}" class="btn btn-primary">
-                            <i class="bi bi-person-plus"></i> Add New Admin
-                        </a>
-                    </div>
-                </div>
+        <!-- Page Header -->
+        <div class="page-header d-flex justify-content-between align-items-center">
+            <div>
+                <h3>
+                    <i class="bi bi-shield-check"></i>
+                    Admin User Management
+                </h3>
+                <p class="text-muted mb-0">
+                    <i class="bi bi-dot"></i> Manage system administrators and their permissions
+                </p>
+            </div>
+            <div>
+                <a href="{{ url_for('admin_create_admin') }}" class="btn-add">
+                    <i class="bi bi-person-plus"></i>
+                    <span>Add New Admin</span>
+                </a>
             </div>
         </div>
 
+        <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
                     <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        <i class="bi bi-{% if category == 'success' %}check-circle-fill{% elif category == 'danger' %}exclamation-triangle-fill{% else %}info-circle-fill{% endif %}"></i>
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
@@ -82,211 +719,347 @@
         {% endwith %}
 
         <!-- Search and Filter -->
-        <div class="row mb-4">
-            <div class="col-md-6">
-                <div class="input-group search-box">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" class="form-control" placeholder="Search admins..." id="searchInput">
+        <div class="search-filter-card">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="input-group search-box">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" placeholder="Search by username, name, email..." id="searchInput">
+                        <span class="input-group-text bg-transparent" id="searchCount">0/0</span>
+                    </div>
                 </div>
-            </div>
-            <div class="col-md-6 text-end">
-                <div class="btn-group">
-                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" 
-                            data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-filter"></i> Filter by Status
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="#" onclick="filterTable('all')">All Users</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="filterTable('active')">Active Only</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="filterTable('inactive')">Inactive Only</a></li>
-                        <li><a class="dropdown-item" href="#" onclick="filterTable('super')">Super Admins</a></li>
-                    </ul>
+                <div class="col-md-6 text-end">
+                    <div class="btn-group filter-dropdown">
+                        <button class="btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-funnel"></i> Filter by Status
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item active" href="#" data-filter="all">All Users <span class="badge bg-primary ms-2">{{ admins|length }}</span></a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="active">Active Only <span class="badge bg-success ms-2">{{ admins|selectattr('6')|list|length }}</span></a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="inactive">Inactive Only <span class="badge bg-danger ms-2">{{ admins|rejectattr('6')|list|length }}</span></a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="super">Super Admins <span class="badge bg-purple ms-2">{{ admins|selectattr('5')|list|length }}</span></a></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Admins Table -->
-        <div class="card">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover" id="adminsTable">
-                        <thead>
-                            <tr>
-                                <th>Username</th>
-                                <th>Full Name</th>
-                                <th>Email</th>
-                                <th>Role</th>
-                                <th>Status</th>
-                                <th>Last Login</th>
-                                <th>Created</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for admin in admins %}
-                            <tr data-status="{{ 'active' if admin[6] else 'inactive' }}" 
-                                data-role="{{ 'super' if admin[5] else 'regular' }}">
-                                <td>
+        <div class="table-card">
+            <div class="table-responsive">
+                <table class="table" id="adminsTable">
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Full Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Last Login</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for admin in admins %}
+                        <tr data-status="{{ 'active' if admin[6] else 'inactive' }}" 
+                            data-role="{{ 'super' if admin[5] else 'regular' }}">
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-person-circle fs-5 text-primary"></i>
                                     <strong>{{ admin[1] }}</strong>
                                     {% if admin[5] %}
-                                        <span class="badge badge-super bg-purple ms-1">Super</span>
+                                        <span class="badge badge-super">
+                                            <i class="bi bi-star-fill"></i> Super
+                                        </span>
                                     {% endif %}
-                                </td>
-                                <td>{{ admin[2] }}</td>
-                                <td>{{ admin[3] or 'N/A' }}</td>
-                                <td>{{ admin[4] }}</td>
-                                <td>
-                                    {% if admin[6] %}
-                                        <span class="badge badge-active">Active</span>
-                                    {% else %}
-                                        <span class="badge badge-inactive">Inactive</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if admin[8] %}
-                                        {{ admin[8].strftime('%Y-%m-%d %H:%M') }}
-                                    {% else %}
-                                        <span class="text-muted">Never</span>
-                                    {% endif %}
-                                </td>
-                                <td>{{ admin[7].strftime('%Y-%m-%d') }}</td>
-                                <td>
-                                    <div class="btn-group btn-group-sm">
-                                        {% if admin[6] %}
-                                            <button class="btn btn-outline-danger action-btn" 
-                                                    onclick="toggleStatus({{ admin[0] }}, 'admin', false)"
-                                                    title="Deactivate">
-                                                <i class="bi bi-person-x"></i>
-                                            </button>
-                                        {% else %}
-                                            <button class="btn btn-outline-success action-btn" 
-                                                    onclick="toggleStatus({{ admin[0] }}, 'admin', true)"
-                                                    title="Activate">
-                                                <i class="bi bi-person-check"></i>
-                                            </button>
-                                        {% endif %}
-                                    </div>
-                                </td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="8" class="text-center text-muted py-4">
-                                    <i class="bi bi-people display-6 mb-3"></i>
-                                    <h5>No Admin Users Found</h5>
-                                    <p>Create your first admin user to get started</p>
-                                    <a href="{{ url_for('admin_create_admin') }}" class="btn btn-primary">
-                                        <i class="bi bi-person-plus"></i> Create Admin User
+                                </div>
+                            </td>
+                            <td>{{ admin[2] }}</td>
+                            <td>
+                                {% if admin[3] %}
+                                    <a href="mailto:{{ admin[3] }}" class="text-decoration-none">
+                                        <i class="bi bi-envelope me-1"></i>{{ admin[3] }}
                                     </a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                                {% else %}
+                                    <span class="text-muted"><i class="bi bi-dash"></i></span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge badge-regular">
+                                    <i class="bi bi-person-badge"></i> {{ admin[4] }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if admin[6] %}
+                                    <span class="badge badge-active">
+                                        <i class="bi bi-check-circle"></i> Active
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-inactive">
+                                        <i class="bi bi-x-circle"></i> Inactive
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if admin[8] %}
+                                    <div>
+                                        <i class="bi bi-clock text-muted"></i>
+                                        {{ admin[8].strftime('%Y-%m-%d %H:%M') }}
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">
+                                        <i class="bi bi-clock-history"></i> Never
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <i class="bi bi-calendar text-muted"></i>
+                                {{ admin[7].strftime('%Y-%m-%d') }}
+                            </td>
+                            <td>
+                                <div class="d-flex gap-1">
+                                    <button class="btn action-btn {% if admin[6] %}btn-outline-danger{% else %}btn-outline-success{% endif %}" 
+                                            onclick="toggleStatus({{ admin[0] }}, 'admin', {{ 'false' if admin[6] else 'true' }})"
+                                            title="{% if admin[6] %}Deactivate{% else %}Activate{% endif %}">
+                                        <i class="bi {% if admin[6] %}bi-person-x{% else %}bi-person-check{% endif %}"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="8">
+                                <div class="empty-state">
+                                    <i class="bi bi-people"></i>
+                                    <h5>No Admin Users Found</h5>
+                                    <p>Create your first admin user to get started with system management</p>
+                                    <a href="{{ url_for('admin_create_admin') }}" class="btn-add" style="display: inline-flex;">
+                                        <i class="bi bi-person-plus"></i>
+                                        Create Admin User
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
 
-        <!-- Summary -->
-        <div class="row mt-4">
-            <div class="col-md-3">
-                <div class="card border-primary">
-                    <div class="card-body text-center">
-                        <h6 class="text-muted">Total Admins</h6>
-                        <h3>{{ admins|length }}</h3>
-                    </div>
+        <!-- Summary Stats -->
+        <div class="row stats-row g-4">
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card border-primary">
+                    <h6><i class="bi bi-people text-primary"></i> Total Admins</h6>
+                    <h3>{{ admins|length }}</h3>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card border-success">
-                    <div class="card-body text-center">
-                        <h6 class="text-muted">Active</h6>
-                        <h3>{{ admins|selectattr('6')|list|length }}</h3>
-                    </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card border-success">
+                    <h6><i class="bi bi-check-circle text-success"></i> Active</h6>
+                    <h3>{{ admins|selectattr('6')|list|length }}</h3>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card border-warning">
-                    <div class="card-body text-center">
-                        <h6 class="text-muted">Inactive</h6>
-                        <h3>{{ admins|rejectattr('6')|list|length }}</h3>
-                    </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card border-warning">
+                    <h6><i class="bi bi-x-circle text-warning"></i> Inactive</h6>
+                    <h3>{{ admins|rejectattr('6')|list|length }}</h3>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="card border-purple">
-                    <div class="card-body text-center">
-                        <h6 class="text-muted">Super Admins</h6>
-                        <h3>{{ admins|selectattr('5')|list|length }}</h3>
-                    </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card border-purple">
+                    <h6><i class="bi bi-star-fill text-purple"></i> Super Admins</h6>
+                    <h3>{{ admins|selectattr('5')|list|length }}</h3>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    
     <script>
-        // Search functionality
-        document.getElementById('searchInput').addEventListener('keyup', function() {
-            const searchTerm = this.value.toLowerCase();
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50
+        });
+
+        // Search functionality with counter
+        const searchInput = document.getElementById('searchInput');
+        const searchCount = document.getElementById('searchCount');
+        
+        function updateSearchCount() {
+            const rows = document.querySelectorAll('#adminsTable tbody tr');
+            const visibleRows = Array.from(rows).filter(row => row.style.display !== 'none');
+            const totalRows = rows.length;
+            
+            if (searchCount) {
+                searchCount.textContent = `${visibleRows.length}/${totalRows}`;
+            }
+        }
+
+        searchInput.addEventListener('keyup', function() {
+            const searchTerm = this.value.toLowerCase().trim();
             const rows = document.querySelectorAll('#adminsTable tbody tr');
             
             rows.forEach(row => {
+                if (row.querySelector('td[colspan]')) return; // Skip empty state row
+                
                 const text = row.textContent.toLowerCase();
-                row.style.display = text.includes(searchTerm) ? '' : 'none';
+                const shouldShow = searchTerm === '' || text.includes(searchTerm);
+                row.style.display = shouldShow ? '' : 'none';
             });
+            
+            updateSearchCount();
         });
 
         // Filter functionality
-        function filterTable(filter) {
-            const rows = document.querySelectorAll('#adminsTable tbody tr');
-            
-            rows.forEach(row => {
-                const status = row.getAttribute('data-status');
-                const role = row.getAttribute('data-role');
+        document.querySelectorAll('.dropdown-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
                 
-                switch(filter) {
-                    case 'active':
-                        row.style.display = status === 'active' ? '' : 'none';
-                        break;
-                    case 'inactive':
-                        row.style.display = status === 'inactive' ? '' : 'none';
-                        break;
-                    case 'super':
-                        row.style.display = role === 'super' ? '' : 'none';
-                        break;
-                    default:
-                        row.style.display = '';
+                // Update active state
+                document.querySelectorAll('.dropdown-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+                
+                const filter = this.dataset.filter;
+                const rows = document.querySelectorAll('#adminsTable tbody tr');
+                
+                rows.forEach(row => {
+                    if (row.querySelector('td[colspan]')) return; // Skip empty state row
+                    
+                    const status = row.getAttribute('data-status');
+                    const role = row.getAttribute('data-role');
+                    
+                    switch(filter) {
+                        case 'active':
+                            row.style.display = status === 'active' ? '' : 'none';
+                            break;
+                        case 'inactive':
+                            row.style.display = status === 'inactive' ? '' : 'none';
+                            break;
+                        case 'super':
+                            row.style.display = role === 'super' ? '' : 'none';
+                            break;
+                        default:
+                            row.style.display = '';
+                    }
+                });
+                
+                updateSearchCount();
+            });
+        });
+
+        // Toggle user status with confirmation
+        function toggleStatus(userId, userType, activate) {
+            const action = activate ? 'activate' : 'deactivate';
+            
+            Swal.fire({
+                title: `Confirm ${action}ation`,
+                text: `Are you sure you want to ${action} this ${userType} user?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: activate ? '#06d6a0' : '#ef476f',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: `Yes, ${action}`,
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loading
+                    Swal.fire({
+                        title: 'Processing...',
+                        text: 'Please wait',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                    
+                    fetch(`/admin/users/toggle-status/${userType}/${userId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire({
+                                title: 'Success!',
+                                text: data.message,
+                                icon: 'success',
+                                timer: 2000,
+                                showConfirmButton: false
+                            }).then(() => {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Error!',
+                                text: data.message,
+                                icon: 'error',
+                                confirmButtonColor: '#4361ee'
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        Swal.fire({
+                            title: 'Error!',
+                            text: 'An error occurred. Please try again.',
+                            icon: 'error',
+                            confirmButtonColor: '#4361ee'
+                        });
+                    });
                 }
             });
         }
 
-        // Toggle user status
-        function toggleStatus(userId, userType, activate) {
-            if (confirm(activate ? 
-                'Are you sure you want to activate this user?' : 
-                'Are you sure you want to deactivate this user?')) {
-                
-                fetch(`/admin/users/toggle-status/${userType}/${userId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        alert(data.message);
-                        location.reload();
-                    } else {
-                        alert('Error: ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred. Please try again.');
+        // Auto-dismiss alerts
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                var alerts = document.querySelectorAll('.alert');
+                alerts.forEach(function(alert) {
+                    var bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
                 });
-            }
+            }, 5000);
+            
+            updateSearchCount();
+        });
+
+        // Prevent form resubmission on page refresh
+        if (window.history.replaceState) {
+            window.history.replaceState(null, null, window.location.href);
         }
+
+        // Add tooltips to action buttons
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+        tooltipTriggerList.map(function(tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + F to focus search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                searchInput.focus();
+            }
+            
+            // Ctrl/Cmd + N to create new
+            if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+                e.preventDefault();
+                window.location.href = "{{ url_for('admin_create_admin') }}";
+            }
+        });
     </script>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </body>
 </html>

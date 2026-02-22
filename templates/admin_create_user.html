@@ -3,39 +3,608 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create {{ user_type|title }} - Admin Panel</title>
+    <title>Create {{ user_type|title }} - Admin Panel | All Saint Medical Center</title>
+    
+    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- AOS Animation Library -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    
     <style>
+        /* ===== RESET & VARIABLES ===== */
+        :root {
+            --primary: #4361ee;
+            --primary-dark: #3a56d4;
+            --primary-light: #6c8cff;
+            --secondary: #7209b7;
+            --success: #06d6a0;
+            --warning: #ff9e00;
+            --danger: #ef476f;
+            --info: #00b4d8;
+            --dark: #0b0f1c;
+            --darker: #070b14;
+            --light: #f8f9ff;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1e293b;
+            --gray-900: #0f172a;
+            
+            --gradient-primary: linear-gradient(135deg, #4361ee 0%, #7209b7 100%);
+            --gradient-secondary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-success: linear-gradient(135deg, #06d6a0 0%, #00b4d8 100%);
+            
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+            --shadow-2xl: 0 25px 50px -12px rgba(0,0,0,0.25);
+            --shadow-primary: 0 20px 40px -15px #4361ee;
+            
+            --border-radius: 12px;
+            --border-radius-lg: 16px;
+            --border-radius-xl: 24px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            background-color: #f8f9fa;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e6ecf5 100%);
+            color: var(--gray-800);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
         }
-        .card {
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(67, 97, 238, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(114, 9, 183, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, rgba(239, 71, 111, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 90% 20%, rgba(6, 214, 160, 0.03) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+            animation: gradientShift 15s ease infinite;
         }
-        .form-control:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+
+        @keyframes gradientShift {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
         }
+
+        /* ===== ANIMATIONS ===== */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
+        }
+
+        /* ===== NAVIGATION ===== */
+        .nav-gradient {
+            background: var(--gradient-primary);
+            padding: 0.75rem 1.5rem;
+            box-shadow: var(--shadow-lg);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            animation: slideInRight 0.5s ease-out;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.35rem;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: white !important;
+            transition: all 0.3s ease;
+        }
+
+        .navbar-brand:hover {
+            transform: translateY(-2px);
+            text-shadow: 0 2px 10px rgba(255,255,255,0.3);
+        }
+
+        .navbar-brand i {
+            font-size: 2rem;
+            filter: drop-shadow(0 2px 5px rgba(0,0,0,0.2));
+            animation: float 3s infinite;
+        }
+
+        .navbar-text {
+            color: rgba(255,255,255,0.95) !important;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .navbar-text i {
+            font-size: 1.25rem;
+        }
+
+        .btn-outline-light {
+            border-width: 2px;
+            font-weight: 600;
+            padding: 0.5rem 1.25rem;
+            border-radius: 30px;
+            transition: all 0.3s ease;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-outline-light:hover {
+            background: white;
+            color: var(--primary) !important;
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* ===== MAIN CARD ===== */
+        .main-card {
+            border: none;
+            border-radius: var(--border-radius-xl);
+            overflow: hidden;
+            box-shadow: var(--shadow-2xl);
+            animation: fadeInUp 0.8s ease-out;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .card-header {
+            background: var(--gradient-primary);
+            border: none;
+            padding: 1.5rem 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: pulse 4s infinite;
+        }
+
+        .card-header::after {
+            content: '';
+            position: absolute;
+            bottom: -50%;
+            left: -10%;
+            width: 150px;
+            height: 150px;
+            background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: pulse 6s infinite reverse;
+        }
+
+        .header-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            color: white;
+            margin-right: 1rem;
+            animation: pulse 2s infinite;
+        }
+
+        .card-header h5 {
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .card-body {
+            padding: 2rem;
+        }
+
+        /* ===== FORM STYLES ===== */
+        .form-label {
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .form-label i {
+            color: var(--primary);
+            font-size: 1.1rem;
+        }
+
+        .form-control, .form-select {
+            border: 2px solid var(--gray-200);
+            border-radius: var(--border-radius);
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .form-control::placeholder {
+            color: var(--gray-400);
+            font-size: 0.95rem;
+        }
+
+        .form-text {
+            color: var(--gray-500);
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .form-text i {
+            color: var(--info);
+        }
+
+        /* Password strength indicator */
+        .password-strength {
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            border-radius: var(--border-radius);
+            font-size: 0.9rem;
+            font-weight: 500;
+            animation: fadeInUp 0.3s ease;
+        }
+
+        .strength-weak {
+            background: linear-gradient(135deg, #fee2e2, #fecaca);
+            color: #991b1b;
+            border-left: 4px solid #dc2626;
+        }
+
+        .strength-medium {
+            background: linear-gradient(135deg, #fef9c3, #fef08a);
+            color: #854d0e;
+            border-left: 4px solid #eab308;
+        }
+
+        .strength-strong {
+            background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+            color: #166534;
+            border-left: 4px solid #16a34a;
+        }
+
+        /* Submit button */
         .btn-submit {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--gradient-primary);
             border: none;
             color: white;
-            padding: 12px;
+            padding: 1rem;
             font-weight: 600;
+            font-size: 1rem;
+            border-radius: var(--border-radius);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
         }
+
+        .btn-submit::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
         .btn-submit:hover {
-            color: white;
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-primary);
+        }
+
+        .btn-submit:hover::before {
+            left: 100%;
+        }
+
+        .btn-submit:active {
+            transform: translateY(-1px);
+        }
+
+        .btn-submit i {
+            font-size: 1.25rem;
+            transition: transform 0.3s ease;
+        }
+
+        .btn-submit:hover i {
+            transform: scale(1.2) rotate(90deg);
+        }
+
+        /* Back button */
+        .btn-outline-secondary {
+            border: 2px solid var(--gray-300);
+            color: var(--gray-700);
+            font-weight: 600;
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-outline-secondary:hover {
+            background: var(--gray-100);
+            border-color: var(--gray-400);
+            color: var(--gray-900);
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            box-shadow: var(--shadow-md);
         }
-        .user-icon {
-            color: #667eea;
+
+        .btn-outline-secondary i {
+            transition: transform 0.3s ease;
         }
-        .nav-gradient {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+        .btn-outline-secondary:hover i {
+            transform: translateX(-5px);
         }
+
+        /* Info Card */
+        .info-card {
+            border: none;
+            border-radius: var(--border-radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+            background: linear-gradient(135deg, var(--gray-800), var(--gray-900));
+            color: white;
+        }
+
+        .info-card .card-body {
+            padding: 1.5rem;
+        }
+
+        .info-card h6 {
+            font-weight: 700;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .info-card h6 i {
+            color: var(--warning);
+        }
+
+        .info-card ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .info-card li {
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.95rem;
+        }
+
+        .info-card li i {
+            color: var(--success);
+            font-size: 1rem;
+        }
+
+        /* Alert styles */
+        .alert {
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            animation: slideInRight 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            border-left: 4px solid;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+            border-left-color: var(--success);
+        }
+
+        .alert-danger {
+            background: linear-gradient(135deg, #fee2e2, #fecaca);
+            border-left-color: var(--danger);
+        }
+
+        .alert-warning {
+            background: linear-gradient(135deg, #fef9c3, #fef08a);
+            border-left-color: var(--warning);
+        }
+
+        .alert-info {
+            background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+            border-left-color: var(--info);
+        }
+
+        /* Loading state */
+        .loading {
+            position: relative;
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: shimmer 1.5s infinite;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .card-header {
+                padding: 1.25rem;
+            }
+            
+            .card-body {
+                padding: 1.25rem;
+            }
+            
+            .navbar-brand span {
+                font-size: 1rem;
+            }
+            
+            .navbar-text {
+                padding: 0.25rem 0.75rem;
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .header-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 1.25rem;
+            }
+            
+            .card-header h5 {
+                font-size: 1rem;
+            }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--gray-200);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
+        }
+
+        /* User type specific icons */
+        .icon-admin { color: #ff9e00; }
+        .icon-cashier { color: #06d6a0; }
+        .icon-pharmacist { color: #00b4d8; }
     </style>
 </head>
 <body>
@@ -43,11 +612,14 @@
     <nav class="navbar navbar-expand-lg navbar-dark nav-gradient">
         <div class="container-fluid">
             <a class="navbar-brand" href="{{ url_for('admin_dashboard') }}">
-                <i class="bi bi-hospital"></i> All Saint Medical Center
+                <i class="bi bi-hospital"></i> 
+                <span>All Saint Medical Center</span>
+                <span class="badge bg-white text-primary ms-2 animate-pulse">Admin</span>
             </a>
             <div class="navbar-nav ms-auto">
                 <span class="navbar-text me-3">
-                    <i class="bi bi-person-circle"></i> {{ admin_name }}
+                    <i class="bi bi-person-circle"></i>
+                    <span>{{ admin_name }}</span>
                 </span>
                 <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-light btn-sm">
                     <i class="bi bi-house"></i> Dashboard
@@ -59,27 +631,37 @@
     <div class="container py-5">
         <div class="row justify-content-center">
             <div class="col-md-8 col-lg-6">
-                <div class="card">
-                    <div class="card-header bg-primary text-white">
+                <!-- Main Card -->
+                <div class="main-card" data-aos="fade-up">
+                    <div class="card-header">
                         <div class="d-flex align-items-center">
-                            {% if user_type == 'admin' %}
-                                <i class="bi bi-shield-check user-icon me-2" style="font-size: 1.5rem;"></i>
-                                <h5 class="mb-0">Create New Admin Account</h5>
-                            {% elif user_type == 'cashier' %}
-                                <i class="bi bi-cash-coin user-icon me-2" style="font-size: 1.5rem;"></i>
-                                <h5 class="mb-0">Create New Cashier Account</h5>
-                            {% elif user_type == 'pharmacist' %}
-                                <i class="bi bi-capsule user-icon me-2" style="font-size: 1.5rem;"></i>
-                                <h5 class="mb-0">Create New Pharmacist Account</h5>
-                            {% endif %}
+                            <div class="header-icon">
+                                {% if user_type == 'admin' %}
+                                    <i class="bi bi-shield-check"></i>
+                                {% elif user_type == 'cashier' %}
+                                    <i class="bi bi-cash-coin"></i>
+                                {% elif user_type == 'pharmacist' %}
+                                    <i class="bi bi-capsule"></i>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <h5 class="mb-0 text-white">
+                                    Create New {{ user_type|title }} Account
+                                </h5>
+                                <p class="text-white-50 mb-0 small">
+                                    Fill in the details below to create a new {{ user_type }} account
+                                </p>
+                            </div>
                         </div>
                     </div>
                     
-                    <div class="card-body p-4">
+                    <div class="card-body">
+                        <!-- Flash Messages -->
                         {% with messages = get_flashed_messages(with_categories=true) %}
                             {% if messages %}
                                 {% for category, message in messages %}
                                     <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                        <i class="bi bi-{% if category == 'success' %}check-circle-fill{% elif category == 'danger' %}exclamation-triangle-fill{% else %}info-circle-fill{% endif %}"></i>
                                         {{ message }}
                                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                                     </div>
@@ -87,45 +669,97 @@
                             {% endif %}
                         {% endwith %}
 
-                        <form method="POST">
-                            <div class="mb-3">
+                        <form method="POST" id="createUserForm">
+                            <!-- Username -->
+                            <div class="mb-4" data-aos="fade-up" data-aos-delay="100">
                                 <label for="username" class="form-label">
-                                    <i class="bi bi-person-circle"></i> Username *
+                                    <i class="bi bi-person-circle"></i>
+                                    Username <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" class="form-control" id="username" name="username" 
-                                       placeholder="Enter unique username" required>
-                                <div class="form-text">Username must be unique. Use lowercase letters and numbers only.</div>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="username" 
+                                       name="username" 
+                                       placeholder="e.g., john_doe or jdoe2024" 
+                                       required
+                                       pattern="[a-zA-Z0-9_]+"
+                                       title="Username can only contain letters, numbers, and underscores">
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle"></i>
+                                    Username must be unique. Use letters, numbers, and underscores only.
+                                </div>
                             </div>
                             
-                            <div class="mb-3">
+                            <!-- Password -->
+                            <div class="mb-4" data-aos="fade-up" data-aos-delay="200">
                                 <label for="password" class="form-label">
-                                    <i class="bi bi-key"></i> Password *
+                                    <i class="bi bi-key"></i>
+                                    Password <span class="text-danger">*</span>
                                 </label>
-                                <input type="password" class="form-control" id="password" name="password" 
-                                       placeholder="Enter strong password" required>
-                                <div class="form-text">Minimum 8 characters with mix of letters, numbers, and symbols.</div>
+                                <div class="input-group">
+                                    <input type="password" 
+                                           class="form-control" 
+                                           id="password" 
+                                           name="password" 
+                                           placeholder="Enter strong password" 
+                                           required
+                                           minlength="8">
+                                    <button class="btn btn-outline-secondary" 
+                                            type="button" 
+                                            id="togglePassword">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </div>
+                                <div id="passwordStrength" class="password-strength mt-2"></div>
+                                <div class="form-text">
+                                    <i class="bi bi-shield-check"></i>
+                                    Minimum 8 characters with mix of letters, numbers, and symbols.
+                                </div>
                             </div>
                             
-                            <div class="mb-3">
+                            <!-- Full Name -->
+                            <div class="mb-4" data-aos="fade-up" data-aos-delay="300">
                                 <label for="full_name" class="form-label">
-                                    <i class="bi bi-person-vcard"></i> Full Name *
+                                    <i class="bi bi-person-vcard"></i>
+                                    Full Name <span class="text-danger">*</span>
                                 </label>
-                                <input type="text" class="form-control" id="full_name" name="full_name" 
-                                       placeholder="Enter full name" required>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="full_name" 
+                                       name="full_name" 
+                                       placeholder="Enter full name" 
+                                       required>
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle"></i>
+                                    Enter the complete name as per official records.
+                                </div>
                             </div>
                             
-                            {% if user_type == 'admin' %}
-                            <div class="mb-3">
+                            <!-- Email (if applicable) -->
+                            {% if user_type in ['admin', 'cashier'] %}
+                            <div class="mb-4" data-aos="fade-up" data-aos-delay="400">
                                 <label for="email" class="form-label">
-                                    <i class="bi bi-envelope"></i> Email
+                                    <i class="bi bi-envelope"></i>
+                                    Email Address
                                 </label>
-                                <input type="email" class="form-control" id="email" name="email" 
-                                       placeholder="Enter email address">
+                                <input type="email" 
+                                       class="form-control" 
+                                       id="email" 
+                                       name="email" 
+                                       placeholder="e.g., name@allsaintmedical.org">
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle"></i>
+                                    Optional but recommended for notifications.
+                                </div>
                             </div>
+                            {% endif %}
                             
-                            <div class="mb-3">
+                            <!-- Role Selection (Admin only) -->
+                            {% if user_type == 'admin' %}
+                            <div class="mb-4" data-aos="fade-up" data-aos-delay="500">
                                 <label for="role" class="form-label">
-                                    <i class="bi bi-person-badge"></i> Role
+                                    <i class="bi bi-person-badge"></i>
+                                    Role
                                 </label>
                                 <select class="form-select" id="role" name="role">
                                     <option value="Admin">Admin</option>
@@ -133,23 +767,20 @@
                                     <option value="HR Manager">HR Manager</option>
                                     <option value="Finance Manager">Finance Manager</option>
                                 </select>
-                            </div>
-                            {% endif %}
-                            
-                            {% if user_type == 'cashier' %}
-                            <div class="mb-3">
-                                <label for="email" class="form-label">
-                                    <i class="bi bi-envelope"></i> Email
-                                </label>
-                                <input type="email" class="form-control" id="email" name="email" 
-                                       placeholder="Enter email address">
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle"></i>
+                                    Select the appropriate role for this admin.
+                                </div>
                             </div>
                             {% endif %}
 
-                            <div class="d-grid gap-2 mt-4">
-                                <button type="submit" class="btn btn-submit btn-lg">
-                                    <i class="bi bi-plus-circle"></i> Create {{ user_type|title }} Account
+                            <!-- Submit Buttons -->
+                            <div class="d-grid gap-3 mt-5" data-aos="fade-up" data-aos-delay="600">
+                                <button type="submit" class="btn btn-submit btn-lg" id="submitBtn">
+                                    <i class="bi bi-plus-circle"></i>
+                                    Create {{ user_type|title }} Account
                                 </button>
+                                
                                 <a href="
                                     {% if user_type == 'admin' %}
                                         {{ url_for('admin_manage_admins') }}
@@ -159,22 +790,46 @@
                                         {{ url_for('admin_manage_pharmacists') }}
                                     {% endif %}
                                 " class="btn btn-outline-secondary">
-                                    <i class="bi bi-arrow-left"></i> Back to List
+                                    <i class="bi bi-arrow-left"></i>
+                                    Back to {{ user_type|title }} List
                                 </a>
                             </div>
                         </form>
                     </div>
                 </div>
-                
-                <div class="card mt-4">
+
+                <!-- Info Card -->
+                <div class="info-card mt-4" data-aos="fade-up" data-aos-delay="700">
                     <div class="card-body">
-                        <h6><i class="bi bi-info-circle"></i> Important Notes:</h6>
-                        <ul class="mb-0">
-                            <li>All fields marked with * are required</li>
-                            <li>Username must be unique across the system</li>
-                            <li>Passwords are securely hashed and cannot be retrieved</li>
-                            <li>New users can login immediately after creation</li>
-                            <li>You can deactivate users at any time from the user list</li>
+                        <h6>
+                            <i class="bi bi-info-circle-fill"></i>
+                            Important Information
+                        </h6>
+                        <ul>
+                            <li>
+                                <i class="bi bi-check-circle-fill"></i>
+                                All fields marked with <span class="text-danger">*</span> are required
+                            </li>
+                            <li>
+                                <i class="bi bi-check-circle-fill"></i>
+                                Username must be unique across the entire system
+                            </li>
+                            <li>
+                                <i class="bi bi-check-circle-fill"></i>
+                                Passwords are encrypted and cannot be retrieved
+                            </li>
+                            <li>
+                                <i class="bi bi-check-circle-fill"></i>
+                                New users can login immediately after creation
+                            </li>
+                            <li>
+                                <i class="bi bi-check-circle-fill"></i>
+                                You can deactivate users anytime from the user list
+                            </li>
+                            <li>
+                                <i class="bi bi-check-circle-fill"></i>
+                                An email notification will be sent if email is provided
+                            </li>
                         </ul>
                     </div>
                 </div>
@@ -182,32 +837,141 @@
         </div>
     </div>
 
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    
     <script>
-        // Password strength indicator (basic)
-        document.getElementById('password').addEventListener('input', function() {
-            const password = this.value;
-            const strengthText = document.createElement('small');
-            
-            if (password.length >= 8 && /[A-Z]/.test(password) && /[0-9]/.test(password) && /[^A-Za-z0-9]/.test(password)) {
-                strengthText.className = 'text-success';
-                strengthText.innerHTML = 'Strong password';
-            } else if (password.length >= 6) {
-                strengthText.className = 'text-warning';
-                strengthText.innerHTML = 'Medium password';
-            } else if (password.length > 0) {
-                strengthText.className = 'text-danger';
-                strengthText.innerHTML = 'Weak password';
-            }
-            
-            const existingStrength = this.parentNode.querySelector('.password-strength');
-            if (existingStrength) {
-                existingStrength.remove();
-            }
-            
-            strengthText.className += ' password-strength mt-1 d-block';
-            this.parentNode.appendChild(strengthText);
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50
         });
+
+        // Password visibility toggle
+        document.getElementById('togglePassword')?.addEventListener('click', function() {
+            const password = document.getElementById('password');
+            const icon = this.querySelector('i');
+            
+            if (password.type === 'password') {
+                password.type = 'text';
+                icon.classList.remove('bi-eye');
+                icon.classList.add('bi-eye-slash');
+            } else {
+                password.type = 'password';
+                icon.classList.remove('bi-eye-slash');
+                icon.classList.add('bi-eye');
+            }
+        });
+
+        // Password strength indicator
+        document.getElementById('password')?.addEventListener('input', function() {
+            const password = this.value;
+            const strengthDiv = document.getElementById('passwordStrength');
+            
+            if (password.length === 0) {
+                strengthDiv.innerHTML = '';
+                strengthDiv.className = 'password-strength';
+                return;
+            }
+            
+            let strength = 0;
+            let feedback = [];
+            
+            // Check length
+            if (password.length >= 8) {
+                strength += 1;
+            } else {
+                feedback.push('at least 8 characters');
+            }
+            
+            // Check for uppercase
+            if (/[A-Z]/.test(password)) {
+                strength += 1;
+            } else {
+                feedback.push('uppercase letter');
+            }
+            
+            // Check for lowercase
+            if (/[a-z]/.test(password)) {
+                strength += 1;
+            } else {
+                feedback.push('lowercase letter');
+            }
+            
+            // Check for numbers
+            if (/[0-9]/.test(password)) {
+                strength += 1;
+            } else {
+                feedback.push('number');
+            }
+            
+            // Check for special characters
+            if (/[^A-Za-z0-9]/.test(password)) {
+                strength += 1;
+            } else {
+                feedback.push('special character');
+            }
+            
+            // Update strength display
+            let strengthClass = '';
+            let strengthText = '';
+            
+            if (strength >= 5) {
+                strengthClass = 'strength-strong';
+                strengthText = '✅ Strong password - Excellent!';
+            } else if (strength >= 3) {
+                strengthClass = 'strength-medium';
+                strengthText = '⚠️ Medium password - Could be stronger';
+            } else {
+                strengthClass = 'strength-weak';
+                strengthText = '❌ Weak password - Add ' + feedback.join(', ');
+            }
+            
+            strengthDiv.className = `password-strength ${strengthClass}`;
+            strengthDiv.innerHTML = `<i class="bi bi-shield-${strength >= 5 ? 'check' : strength >= 3 ? 'exclamation' : 'x'}"></i> ${strengthText}`;
+        });
+
+        // Form submission with loading state
+        document.getElementById('createUserForm')?.addEventListener('submit', function(e) {
+            const submitBtn = document.getElementById('submitBtn');
+            if (submitBtn) {
+                submitBtn.classList.add('loading');
+                submitBtn.innerHTML = `
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    Creating Account...
+                `;
+            }
+        });
+
+        // Auto-dismiss alerts
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                var alerts = document.querySelectorAll('.alert');
+                alerts.forEach(function(alert) {
+                    var bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                });
+            }, 5000);
+        });
+
+        // Username validation
+        document.getElementById('username')?.addEventListener('input', function() {
+            const username = this.value;
+            const isValid = /^[a-zA-Z0-9_]+$/.test(username);
+            
+            if (username.length > 0 && !isValid) {
+                this.classList.add('is-invalid');
+            } else {
+                this.classList.remove('is-invalid');
+            }
+        });
+
+        // Prevent form resubmission on page refresh
+        if (window.history.replaceState) {
+            window.history.replaceState(null, null, window.location.href);
+        }
     </script>
 </body>
 </html>

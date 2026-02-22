@@ -113,10 +113,10 @@
                         <div class="progress mt-2">
                             <div class="progress-bar {% if grand_total >= daily_target %}bg-success{% else %}bg-warning{% endif %}" 
                                  role="progressbar" 
-                                 style="width: {{ min(100, (grand_total/daily_target)*100) }}%">
+                                 style="width: {{ progress_percentage }}%">
                             </div>
                         </div>
-                        <small class="text-muted">{{ "%.1f"|format(min(100, (grand_total/daily_target)*100)) }}% achieved</small>
+                        <small class="text-muted">{{ "%.1f"|format(progress_percentage) }}% achieved</small>
                     </div>
                 </div>
             </div>
@@ -226,22 +226,19 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for service in service_type_data %}
-                                    <tr>
-                                        <td><strong>{{ service[0] }}</strong></td>
-                                        <td>{{ service[1] }}</td>
-                                        <td>₦{{ "%.2f"|format(service[2]) }}</td>
-                                        <td>{{ "%.1f"|format((service[2]/grand_total)*100 if grand_total > 0 else 0) }}%</td>
-                                        <td>
-                                            <div class="progress" style="height: 8px;">
-                                                <div class="progress-bar" 
-                                                     role="progressbar" 
-                                                     style="width: {{ (service[2]/grand_total)*100 if grand_total > 0 else 0 }}%">
-                                                </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
+                                    {% if service_type_data %}
+                                        {% for service in service_type_data %}
+                                        <tr>
+                                            <td>{{ service.service_type }}</td>
+                                            <td>{{ service.transaction_count }}</td>
+                                            <td>₦{{ "%.2f"|format(service.total_amount) }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="3" class="text-center">No transactions today</td>
+                                        </tr>
+                                    {% endif %}
                                 </tbody>
                             </table>
                         </div>
