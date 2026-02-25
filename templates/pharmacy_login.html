@@ -1,37 +1,734 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Pharmacy Login</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/pharmacy_login.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pharmacy Login - All Saint Medical Center</title>
+    
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- AOS Animation Library -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    
+    <style>
+        /* ===== CONSISTENT DESIGN SYSTEM ===== */
+        :root {
+            --primary: #4361ee;
+            --primary-dark: #3a56d4;
+            --primary-light: #6c8cff;
+            --secondary: #7209b7;
+            --success: #06d6a0;
+            --warning: #ff9e00;
+            --danger: #ef476f;
+            --info: #00b4d8;
+            --dark: #0b0f1c;
+            --darker: #070b14;
+            --light: #f8f9ff;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1e293b;
+            --gray-900: #0f172a;
+            
+            /* ===== CONSISTENT GRADIENT FOR ALL PAGES ===== */
+            --gradient-primary: linear-gradient(135deg, #4361ee 0%, #7209b7 100%);
+            
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.02);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1);
+            --shadow-2xl: 0 25px 50px -12px rgba(0,0,0,0.25);
+            
+            --border-radius: 12px;
+            --border-radius-lg: 16px;
+            --border-radius-xl: 24px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e6ecf5 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(67, 97, 238, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(114, 9, 183, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+            animation: gradientShift 15s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* Floating shapes */
+        .floating-shape {
+            position: fixed;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .shape-1 {
+            width: 400px;
+            height: 400px;
+            top: -200px;
+            right: -100px;
+            background: radial-gradient(circle, rgba(67, 97, 238, 0.1) 0%, transparent 70%);
+            animation: float 20s infinite alternate;
+        }
+
+        .shape-2 {
+            width: 350px;
+            height: 350px;
+            bottom: -150px;
+            left: -100px;
+            background: radial-gradient(circle, rgba(114, 9, 183, 0.1) 0%, transparent 70%);
+            animation: float 25s infinite alternate-reverse;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(50px, 50px) scale(1.1); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInLeft {
+            from { opacity: 0; transform: translateX(-30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        /* ===== LOGIN CONTAINER ===== */
+        .login-wrapper {
+            width: 100%;
+            max-width: 450px;
+            padding: 1.5rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .hospital-badge {
+            text-align: center;
+            margin-bottom: 2rem;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .hospital-badge i {
+            font-size: 3.5rem;
+            color: var(--primary);
+            background: white;
+            padding: 1rem;
+            border-radius: 50%;
+            box-shadow: var(--shadow-xl);
+            animation: pulse 2s infinite;
+        }
+
+        .login-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: var(--border-radius-xl);
+            box-shadow: var(--shadow-2xl);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            animation: fadeInUp 0.8s ease-out 0.1s both;
+            position: relative;
+        }
+
+        .login-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: var(--gradient-primary);
+        }
+
+        /* ===== HEADER ===== */
+        .login-header {
+            padding: 2rem 2rem 1.5rem;
+            text-align: center;
+            background: linear-gradient(135deg, rgba(67, 97, 238, 0.05), rgba(114, 9, 183, 0.05));
+        }
+
+        .icon-wrapper {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem;
+            background: var(--gradient-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-lg);
+            animation: pulse 2s infinite;
+        }
+
+        .icon-wrapper i {
+            font-size: 2.5rem;
+            color: white;
+        }
+
+        .hospital-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 0.25rem;
+            letter-spacing: -0.5px;
+        }
+
+        .hospital-location {
+            color: var(--gray-600);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .login-title {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .login-subtitle {
+            color: var(--gray-500);
+            font-size: 0.9rem;
+        }
+
+        /* ===== ALERTS ===== */
+        .alert {
+            margin: 0 2rem 1rem;
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            border-left: 4px solid;
+            animation: fadeInLeft 0.3s ease;
+        }
+
+        .alert-danger {
+            background: linear-gradient(135deg, #fee2e2, #fecaca);
+            border-left-color: var(--danger);
+            color: #991b1b;
+        }
+
+        .alert i {
+            font-size: 1.1rem;
+        }
+
+        /* ===== FORM ===== */
+        .login-form {
+            padding: 0 2rem 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            animation: fadeInUp 0.6s ease-out forwards;
+            opacity: 0;
+        }
+
+        .form-group:nth-child(1) { animation-delay: 0.2s; }
+        .form-group:nth-child(2) { animation-delay: 0.3s; }
+
+        .form-label {
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-label i {
+            color: var(--primary);
+        }
+
+        .input-group {
+            border: 2px solid var(--gray-200);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            background: white;
+            display: flex;
+        }
+
+        .input-group:focus-within {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .input-group-text {
+            background: var(--gray-100);
+            border: none;
+            color: var(--primary);
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .form-control {
+            border: none;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            flex: 1;
+            outline: none;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .form-control::placeholder {
+            color: var(--gray-400);
+        }
+
+        .toggle-password {
+            border: none;
+            background: white;
+            color: var(--gray-600);
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .toggle-password:hover {
+            color: var(--primary);
+        }
+
+        /* ===== BUTTON ===== */
+        .btn-login {
+            background: var(--gradient-primary);
+            border: none;
+            color: white;
+            padding: 1rem;
+            font-weight: 600;
+            font-size: 1rem;
+            border-radius: var(--border-radius);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.6s ease-out 0.4s forwards;
+            opacity: 0;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            margin-bottom: 1rem;
+        }
+
+        .btn-login::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .btn-login:hover::before {
+            left: 100%;
+        }
+
+        .btn-login i {
+            font-size: 1.1rem;
+        }
+
+        /* ===== BACK LINK ===== */
+        .back-link {
+            color: var(--primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            padding: 0.75rem;
+            border-radius: var(--border-radius);
+            background: var(--gray-100);
+            animation: fadeInUp 0.6s ease-out 0.5s forwards;
+            opacity: 0;
+        }
+
+        .back-link:hover {
+            color: var(--secondary);
+            background: var(--gray-200);
+            transform: translateX(-5px);
+        }
+
+        .back-link i {
+            transition: transform 0.3s ease;
+        }
+
+        .back-link:hover i {
+            transform: translateX(-3px);
+        }
+
+        /* ===== SECURITY NOTICE ===== */
+        .security-notice {
+            margin-top: 1.5rem;
+            text-align: center;
+            color: var(--gray-500);
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            animation: fadeInUp 0.6s ease-out 0.6s forwards;
+            opacity: 0;
+        }
+
+        .security-notice i {
+            color: var(--success);
+        }
+
+        /* ===== FOOTER ===== */
+        .footer-copyright {
+            text-align: center;
+            margin-top: 2rem;
+            color: var(--gray-500);
+            font-size: 0.85rem;
+            animation: fadeInUp 0.8s ease-out 0.7s forwards;
+            opacity: 0;
+        }
+
+        /* ===== LOADING STATE ===== */
+        .loading {
+            position: relative;
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 576px) {
+            .login-wrapper {
+                padding: 1rem;
+            }
+            
+            .login-header {
+                padding: 1.5rem 1.5rem 1rem;
+            }
+            
+            .login-form {
+                padding: 0 1.5rem 1.5rem;
+            }
+            
+            .icon-wrapper {
+                width: 60px;
+                height: 60px;
+            }
+            
+            .icon-wrapper i {
+                font-size: 2rem;
+            }
+            
+            .hospital-name {
+                font-size: 1.25rem;
+            }
+            
+            .login-title {
+                font-size: 1.2rem;
+            }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--gray-200);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
+        }
+    </style>
 </head>
 <body>
 
-<div class="login-container">
-    <h2>Pharmacy Login</h2>
+    <!-- Floating shapes -->
+    <div class="floating-shape shape-1"></div>
+    <div class="floating-shape shape-2"></div>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% for category, message in messages %}
-            {% if category == 'error' %}
-                <p class="error visible">{{ message }}</p>
-            {% endif %}
-        {% endfor %}
-    {% endwith %}
-
-    <form method="POST">
-        <div>
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username"  required autocomplete="username">
+    <div class="login-wrapper">
+        
+        <!-- Hospital Badge -->
+        <div class="hospital-badge" data-aos="zoom-in">
+            <i class="fa-solid fa-capsules"></i>
         </div>
-        <div>
-            <label for="password">Password</label>
-            <input type="password" id="password" name="password"  required autocomplete="current-password">
-        </div>
-        <button type="submit">Login</button>
-        <a href="{{ url_for('landing_page') }}" class="back-link">
-            ← Back to Main Dashboard
-        </a>
-    </form>
-</div>
 
+        <!-- Login Card -->
+        <div class="login-card">
+            
+            <!-- Header -->
+            <div class="login-header">
+                <div class="icon-wrapper">
+                    <i class="fa-solid fa-capsules"></i> <!-- Pharmacy icon -->
+                </div>
+                <h4 class="hospital-name">All Saint Medical Center</h4>
+                <p class="hospital-location">Nsukka, Enugu State</p>
+                <h5 class="login-title">Pharmacy Portal</h5>
+                <p class="login-subtitle">Secure access for pharmacy staff</p>
+            </div>
+
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}
+                    {% if category == 'error' %}
+                        <div class="alert alert-danger">
+                            <i class="fa-solid fa-circle-exclamation"></i>
+                            {{ message }}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% endwith %}
+
+            <!-- Login Form -->
+            <form method="POST" class="login-form" id="loginForm">
+                
+                <!-- Username Field -->
+                <div class="form-group">
+                    <label for="username" class="form-label">
+                        <i class="fa-regular fa-user"></i>
+                        <span>Username</span>
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fa-regular fa-user"></i>
+                        </span>
+                        <input type="text" 
+                               class="form-control" 
+                               id="username" 
+                               name="username" 
+                               placeholder="Enter your username" 
+                               required
+                               autocomplete="username"
+                               autofocus>
+                    </div>
+                </div>
+
+                <!-- Password Field -->
+                <div class="form-group">
+                    <label for="password" class="form-label">
+                        <i class="fa-solid fa-key"></i>
+                        <span>Password</span>
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="fa-solid fa-lock"></i>
+                        </span>
+                        <input type="password" 
+                               class="form-control" 
+                               id="password" 
+                               name="password" 
+                               placeholder="Enter your password" 
+                               required
+                               autocomplete="current-password">
+                        <button class="toggle-password" 
+                                type="button" 
+                                onclick="togglePasswordVisibility()"
+                                aria-label="Toggle password visibility">
+                            <i class="fa-regular fa-eye" id="togglePasswordIcon"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="btn-login" id="submitBtn">
+                    <i class="fa-solid fa-right-to-bracket"></i>
+                    <span>Access Pharmacy System</span>
+                </button>
+
+                <!-- Back Link -->
+                <a href="{{ url_for('landing_page') }}" class="back-link">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>Back to Main Dashboard</span>
+                </a>
+
+                <!-- Security Notice -->
+                <!-- <div class="security-notice">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Secure login with 256-bit encryption</span>
+                </div> -->
+            </form>
+        </div>
+
+        <!-- Footer Copyright -->
+        <div class="footer-copyright">
+            <p>&copy; 2026 All Saint Medical Center. All rights reserved.</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    
+    <script>
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50
+        });
+
+        // Toggle password visibility
+        function togglePasswordVisibility() {
+            const passwordInput = document.getElementById('password');
+            const toggleIcon = document.getElementById('togglePasswordIcon');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.classList.remove('fa-eye');
+                toggleIcon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.classList.remove('fa-eye-slash');
+                toggleIcon.classList.add('fa-eye');
+            }
+        }
+
+        // Form submission with loading state
+        document.getElementById('loginForm')?.addEventListener('submit', function(e) {
+            const submitBtn = document.getElementById('submitBtn');
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+
+            // Basic validation
+            if (!username || !password) {
+                e.preventDefault();
+                alert('Please enter both username and password');
+                return;
+            }
+
+            // Add loading state
+            submitBtn.classList.add('loading');
+            submitBtn.innerHTML = `
+                <i class="fa-solid fa-circle-notch fa-spin"></i>
+                Logging in...
+            `;
+        });
+
+        // Auto-dismiss alerts after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                document.querySelectorAll('.alert').forEach(alert => {
+                    alert.style.transition = 'opacity 0.5s ease';
+                    alert.style.opacity = '0';
+                    setTimeout(() => alert.remove(), 500);
+                });
+            }, 5000);
+        });
+
+        // Input focus effects
+        document.querySelectorAll('.form-control').forEach(input => {
+            input.addEventListener('focus', function() {
+                this.closest('.input-group')?.classList.add('focused');
+            });
+            
+            input.addEventListener('blur', function() {
+                this.closest('.input-group')?.classList.remove('focused');
+            });
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl+Shift+P to focus username
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'P') {
+                e.preventDefault();
+                document.getElementById('username')?.focus();
+            }
+            // Escape to go back
+            if (e.key === 'Escape') {
+                window.location.href = "{{ url_for('landing_page') }}";
+            }
+        });
+
+        // Prevent form resubmission on page refresh
+        if (window.history.replaceState) {
+            window.history.replaceState(null, null, window.location.href);
+        }
+
+        // Add tooltips
+        const passwordToggle = document.querySelector('.toggle-password');
+        if (passwordToggle) {
+            passwordToggle.setAttribute('title', 'Show/Hide Password');
+        }
+    </script>
 </body>
 </html>

@@ -3,279 +3,580 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Payment History | Billing Dashboard</title>
+    <title>Payment History | Billing Dashboard - All Saint Medical Center</title>
     
-    <!-- Font Awesome -->
+    <!-- Font Awesome 6 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/billing_dashboard.css') }}">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- AOS Animation Library -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     
     <style>
-        /* Payment History Specific Styles */
+        /* ===== CONSISTENT DESIGN SYSTEM ===== */
+        :root {
+            --primary: #4361ee;
+            --primary-dark: #3a56d4;
+            --primary-light: #6c8cff;
+            --secondary: #7209b7;
+            --success: #06d6a0;
+            --warning: #ff9e00;
+            --danger: #ef476f;
+            --info: #00b4d8;
+            --dark: #0b0f1c;
+            --darker: #070b14;
+            --light: #f8f9ff;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1e293b;
+            --gray-900: #0f172a;
+            
+            --gradient-primary: linear-gradient(135deg, #4361ee 0%, #7209b7 100%);
+            --gradient-success: linear-gradient(135deg, #06d6a0 0%, #00b4d8 100%);
+            --gradient-warning: linear-gradient(135deg, #ff9e00 0%, #ef476f 100%);
+            
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.02);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1);
+            --shadow-2xl: 0 25px 50px -12px rgba(0,0,0,0.25);
+            
+            --border-radius: 12px;
+            --border-radius-lg: 16px;
+            --border-radius-xl: 24px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e6ecf5 100%);
+            color: var(--gray-800);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(67, 97, 238, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(114, 9, 183, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+            animation: gradientShift 15s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideInLeft {
+            from { transform: translateX(-30px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(30px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        /* ===== TOP BAR ===== */
+        .topbar {
+            background: var(--gradient-primary);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow-lg);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .user-info h2 {
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            letter-spacing: -0.5px;
+        }
+
+        .user-info p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logout-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .logout-btn:hover {
+            background: white;
+            color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        /* ===== MAIN CONTAINER ===== */
         .payment-history-container {
-            padding: 20px;
-            max-width: 1400px;
+            padding: 2rem;
+            max-width: 1600px;
             margin: 0 auto;
         }
-        
+
+        /* ===== BACK BUTTON ===== */
         .back-btn {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            background: #2c3e50;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
+            gap: 0.5rem;
+            background: white;
+            color: var(--primary);
+            padding: 0.75rem 1.5rem;
+            border-radius: 30px;
             text-decoration: none;
-            margin-bottom: 20px;
-            transition: background 0.3s;
+            margin-bottom: 2rem;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            box-shadow: var(--shadow-md);
+            border: 2px solid transparent;
         }
-        
+
         .back-btn:hover {
-            background: #34495e;
+            background: var(--primary);
+            color: white;
+            transform: translateX(-5px);
+            box-shadow: var(--shadow-lg);
         }
-        
+
+        .back-btn i {
+            transition: transform 0.3s ease;
+        }
+
+        .back-btn:hover i {
+            transform: translateX(-3px);
+        }
+
+        /* ===== HEADER ===== */
         .history-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
+            margin-bottom: 2rem;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 1rem;
+            animation: slideInLeft 0.8s ease-out;
         }
-        
+
         .history-header h1 {
-            color: #2c3e50;
-            margin: 0;
+            color: var(--gray-900);
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
         }
-        
+
+        .history-header h1 i {
+            color: var(--primary);
+            background: rgba(67, 97, 238, 0.1);
+            padding: 0.75rem;
+            border-radius: 12px;
+        }
+
+        .export-btn {
+            background: var(--success);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(6, 214, 160, 0.3);
+            border: none;
+        }
+
+        .export-btn:hover {
+            background: #05b386;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(6, 214, 160, 0.4);
+        }
+
+        /* ===== FILTERS SECTION ===== */
         .filters-section {
             background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+            border-radius: var(--border-radius-xl);
+            padding: 2rem;
+            box-shadow: var(--shadow-lg);
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(10px);
+            animation: slideInRight 0.8s ease-out;
         }
-        
+
         .filter-form {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
+            gap: 1rem;
             align-items: end;
         }
-        
+
         .form-group {
             display: flex;
             flex-direction: column;
         }
-        
+
         .form-group label {
-            margin-bottom: 5px;
-            color: #555;
-            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--gray-700);
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
-        
+
+        .form-group label i {
+            color: var(--primary);
+        }
+
         .form-group input,
         .form-group select {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--gray-200);
+            border-radius: var(--border-radius);
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            background: white;
+            font-family: 'Inter', sans-serif;
         }
-        
+
+        .form-group input:focus,
+        .form-group select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.15);
+            outline: none;
+            transform: translateY(-2px);
+        }
+
         .filter-actions {
             display: flex;
-            gap: 10px;
+            gap: 0.75rem;
+            grid-column: span 1;
         }
-        
+
         .filter-btn {
-            background: #3498db;
+            background: var(--gradient-primary);
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--border-radius);
             cursor: pointer;
-            transition: background 0.3s;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+            justify-content: center;
         }
-        
+
         .filter-btn:hover {
-            background: #2980b9;
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-xl);
         }
-        
+
         .reset-btn {
-            background: #95a5a6;
-            color: white;
+            background: var(--gray-200);
+            color: var(--gray-700);
             border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--border-radius);
             cursor: pointer;
-            transition: background 0.3s;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+            justify-content: center;
+            text-decoration: none;
         }
-        
+
         .reset-btn:hover {
-            background: #7f8c8d;
+            background: var(--gray-300);
+            transform: translateY(-3px);
         }
-        
-        /* Payments Table */
+
+        /* ===== TABLE CONTAINER ===== */
         .payments-table-container {
             background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: var(--border-radius-xl);
+            box-shadow: var(--shadow-2xl);
             overflow: hidden;
+            animation: fadeIn 0.8s ease-out;
+            border: 1px solid rgba(255, 255, 255, 0.5);
         }
-        
+
         .payments-table {
             width: 100%;
             border-collapse: collapse;
         }
-        
+
         .payments-table thead {
-            background: #2c3e50;
+            background: var(--gradient-primary);
             color: white;
         }
-        
+
         .payments-table th {
-            padding: 15px;
+            padding: 1.25rem 1rem;
             text-align: left;
             font-weight: 600;
-        }
-        
-        .payments-table tbody tr {
-            border-bottom: 1px solid #eee;
-            transition: background 0.2s;
-        }
-        
-        .payments-table tbody tr:hover {
-            background: #f8f9fa;
-        }
-        
-        .payments-table td {
-            padding: 15px;
-            color: #333;
-        }
-        
-        .status-badge {
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
+            font-size: 0.9rem;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
-        
+
+        .payments-table th i {
+            margin-right: 0.5rem;
+        }
+
+        .payments-table tbody tr {
+            border-bottom: 1px solid var(--gray-200);
+            transition: all 0.3s ease;
+        }
+
+        .payments-table tbody tr:hover {
+            background: var(--gray-100);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .payments-table td {
+            padding: 1rem;
+            color: var(--gray-700);
+            vertical-align: middle;
+        }
+
+        .payments-table td:first-child {
+            font-weight: 600;
+            color: var(--gray-900);
+        }
+
+        /* Status Badges */
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
+        }
+
         .status-paid {
-            background: #d4edda;
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
             color: #155724;
         }
-        
+
         .status-partial {
-            background: #fff3cd;
+            background: linear-gradient(135deg, #fff3cd, #ffeeba);
             color: #856404;
         }
-        
+
         .status-unpaid {
-            background: #f8d7da;
+            background: linear-gradient(135deg, #f8d7da, #f5c6cb);
             color: #721c24;
         }
-        
-        .action-btn {
-            padding: 5px 10px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            transition: opacity 0.3s;
-        }
-        
-        .action-btn:hover {
-            opacity: 0.8;
-        }
-        
-        .view-btn {
-            background: #3498db;
-            color: white;
-        }
-        
-        .print-btn {
-            background: #27ae60;
-            color: white;
-        }
-        
+
+        /* Payment Method */
         .payment-method {
             display: inline-flex;
             align-items: center;
-            gap: 5px;
+            gap: 0.5rem;
+            padding: 0.4rem 0.8rem;
+            background: var(--gray-100);
+            border-radius: 20px;
+            font-size: 0.9rem;
         }
-        
-        .empty-state {
-            text-align: center;
-            padding: 50px;
-            color: #7f8c8d;
+
+        .payment-method i {
+            color: var(--primary);
         }
-        
-        .empty-state i {
-            font-size: 48px;
-            margin-bottom: 20px;
-            color: #bdc3c7;
-        }
-        
-        .export-btn {
-            background: #27ae60;
-            color: white;
+
+        /* Action Buttons */
+        .action-btn {
+            padding: 0.4rem 1rem;
             border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
+            border-radius: 20px;
             cursor: pointer;
-            display: flex;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 0.4rem;
             text-decoration: none;
-            font-size: 14px;
+            font-weight: 500;
         }
-        
-        .export-btn:hover {
-            background: #219955;
+
+        .view-btn {
+            background: var(--info);
+            color: white;
         }
-        
+
+        .print-btn {
+            background: var(--success);
+            color: white;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+            filter: brightness(1.1);
+        }
+
         /* Pagination */
         .pagination {
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 10px;
-            padding: 20px;
-            background: white;
-            border-top: 1px solid #eee;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: var(--gray-100);
+            border-top: 2px solid var(--gray-200);
         }
-        
+
         .page-link {
-            padding: 8px 12px;
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            color: #3498db;
+            padding: 0.6rem 1.2rem;
+            background: white;
+            border: 2px solid var(--gray-200);
+            color: var(--primary);
             text-decoration: none;
-            border-radius: 4px;
+            border-radius: 30px;
+            transition: all 0.3s ease;
+            font-weight: 500;
         }
-        
+
         .page-link:hover {
-            background: #e9ecef;
-        }
-        
-        .page-link.active {
-            background: #3498db;
+            background: var(--primary);
             color: white;
-            border-color: #3498db;
+            border-color: var(--primary);
+            transform: translateY(-2px);
         }
-        
+
+        .page-link.active {
+            background: var(--gradient-primary);
+            color: white;
+            border-color: transparent;
+        }
+
         .page-info {
-            color: #6c757d;
+            color: var(--gray-600);
+            font-weight: 500;
         }
-        
+
+        /* Summary */
+        .summary-box {
+            padding: 1rem 1.5rem;
+            background: var(--gray-100);
+            border-top: 2px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .summary-box strong {
+            color: var(--gray-900);
+        }
+
+        .total-amount {
+            font-size: 1.2rem;
+            color: var(--success);
+            font-weight: 700;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--gray-500);
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            animation: float 3s infinite;
+        }
+
+        .empty-state h3 {
+            font-weight: 700;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state p {
+            margin-bottom: 1.5rem;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
-            .payments-table {
-                display: block;
-                overflow-x: auto;
+            .payment-history-container {
+                padding: 1rem;
             }
             
             .history-header {
@@ -286,6 +587,43 @@
             .filter-form {
                 grid-template-columns: 1fr;
             }
+            
+            .filter-actions {
+                flex-direction: column;
+            }
+            
+            .payments-table {
+                display: block;
+                overflow-x: auto;
+            }
+            
+            .summary-box {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .pagination {
+                flex-wrap: wrap;
+            }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--gray-200);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
         }
     </style>
 </head>
@@ -294,8 +632,17 @@
     <!-- ================= TOP BAR ================= -->
     <header class="topbar">
         <div class="user-info">
-            <h2>Billing & Revenue</h2>
-            <p>Welcome, {{ session.get('billing_username', 'User') }}</p>
+            <h2>
+                <i class="fa-solid fa-hospital"></i>
+                All Saint Medical Center
+            </h2>
+            <p>
+                <i class="fa-regular fa-circle-user"></i>
+                Welcome, {{ session.get('billing_username', 'Billing Officer') }}
+                <span style="background: rgba(255,255,255,0.2); padding: 0.25rem 0.75rem; border-radius: 20px; margin-left: 0.5rem; font-size: 0.8rem;">
+                    <i class="fa-solid fa-cash-register"></i> Billing
+                </span>
+            </p>
         </div>
 
         <a href="{{ url_for('billing_logout') }}" class="logout-btn">
@@ -312,24 +659,31 @@
         
         <!-- Header -->
         <div class="history-header">
-            <h1><i class="fa-solid fa-receipt"></i> Payment History</h1>
+            <h1>
+                <i class="fa-solid fa-receipt"></i>
+                Payment History
+            </h1>
             <a href="{{ url_for('export_payment_history', **request.args) }}" class="export-btn">
                 <i class="fa-solid fa-file-excel"></i> Export to Excel
             </a>
         </div>
         
         <!-- Filters Section -->
-        <div class="filters-section">
+        <div class="filters-section" data-aos="fade-up">
             <form method="GET" action="{{ url_for('payment_history') }}" class="filter-form">
                 <div class="form-group">
-                    <label for="patient_name">Patient Name</label>
+                    <label for="patient_name">
+                        <i class="fa-regular fa-user"></i> Patient Name
+                    </label>
                     <input type="text" id="patient_name" name="patient_name" 
                            value="{{ request.args.get('patient_name', '') }}"
-                           placeholder="Search patient...">
+                           placeholder="Search by patient name...">
                 </div>
                 
                 <div class="form-group">
-                    <label for="service_type">Service Type</label>
+                    <label for="service_type">
+                        <i class="fa-solid fa-stethoscope"></i> Service Type
+                    </label>
                     <select id="service_type" name="service_type">
                         <option value="">All Services</option>
                         {% for service in service_types %}
@@ -341,42 +695,50 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="payment_method">Payment Method</label>
+                    <label for="payment_method">
+                        <i class="fa-solid fa-credit-card"></i> Payment Method
+                    </label>
                     <select id="payment_method" name="payment_method">
                         <option value="">All Methods</option>
-                        <option value="Cash" {% if request.args.get('payment_method') == 'Cash' %}selected{% endif %}>Cash</option>
-                        <option value="Card" {% if request.args.get('payment_method') == 'Card' %}selected{% endif %}>Card</option>
-                        <option value="Transfer" {% if request.args.get('payment_method') == 'Transfer' %}selected{% endif %}>Transfer</option>
-                        <option value="POS" {% if request.args.get('payment_method') == 'POS' %}selected{% endif %}>POS</option>
-                        <option value="Insurance" {% if request.args.get('payment_method') == 'Insurance' %}selected{% endif %}>Insurance</option>
+                        <option value="Cash" {% if request.args.get('payment_method') == 'Cash' %}selected{% endif %}>💰 Cash</option>
+                        <option value="Card" {% if request.args.get('payment_method') == 'Card' %}selected{% endif %}>💳 Card</option>
+                        <option value="Transfer" {% if request.args.get('payment_method') == 'Transfer' %}selected{% endif %}>🏦 Transfer</option>
+                        <option value="POS" {% if request.args.get('payment_method') == 'POS' %}selected{% endif %}>📱 POS</option>
+                        <option value="Insurance" {% if request.args.get('payment_method') == 'Insurance' %}selected{% endif %}>🛡️ Insurance</option>
                     </select>
                 </div>
                 
                 <div class="form-group">
-                    <label for="status">Status</label>
+                    <label for="status">
+                        <i class="fa-solid fa-circle-check"></i> Status
+                    </label>
                     <select id="status" name="status">
                         <option value="">All Status</option>
-                        <option value="Paid" {% if request.args.get('status') == 'Paid' %}selected{% endif %}>Paid</option>
-                        <option value="Partial" {% if request.args.get('status') == 'Partial' %}selected{% endif %}>Partial</option>
-                        <option value="Unpaid" {% if request.args.get('status') == 'Unpaid' %}selected{% endif %}>Unpaid</option>
+                        <option value="Paid" {% if request.args.get('status') == 'Paid' %}selected{% endif %}>✅ Paid</option>
+                        <option value="Partial" {% if request.args.get('status') == 'Partial' %}selected{% endif %}>⏳ Partial</option>
+                        <option value="Unpaid" {% if request.args.get('status') == 'Unpaid' %}selected{% endif %}>❌ Unpaid</option>
                     </select>
                 </div>
                 
                 <div class="form-group">
-                    <label for="start_date">From Date</label>
+                    <label for="start_date">
+                        <i class="fa-regular fa-calendar"></i> From Date
+                    </label>
                     <input type="date" id="start_date" name="start_date" 
                            value="{{ request.args.get('start_date', '') }}">
                 </div>
                 
                 <div class="form-group">
-                    <label for="end_date">To Date</label>
+                    <label for="end_date">
+                        <i class="fa-regular fa-calendar"></i> To Date
+                    </label>
                     <input type="date" id="end_date" name="end_date" 
                            value="{{ request.args.get('end_date', '') }}">
                 </div>
                 
                 <div class="filter-actions">
                     <button type="submit" class="filter-btn">
-                        <i class="fa-solid fa-filter"></i> Filter
+                        <i class="fa-solid fa-filter"></i> Apply Filters
                     </button>
                     <a href="{{ url_for('payment_history') }}" class="reset-btn">
                         <i class="fa-solid fa-rotate-left"></i> Reset
@@ -386,29 +748,41 @@
         </div>
         
         <!-- Payments Table -->
-        <div class="payments-table-container">
+        <div class="payments-table-container" data-aos="fade-up" data-aos-delay="100">
             {% if payments %}
                 <table class="payments-table">
                     <thead>
                         <tr>
-                            <th>Receipt No</th>
-                            <th>Patient Name</th>
-                            <th>Service Type</th>
-                            <th>Amount (₦)</th>
-                            <th>Date</th>
-                            <th>Payment Method</th>
-                            <th>Status</th>
-                            <th>Actions</th>
+                            <th><i class="fa-solid fa-hashtag"></i> Receipt No</th>
+                            <th><i class="fa-regular fa-user"></i> Patient Name</th>
+                            <th><i class="fa-solid fa-stethoscope"></i> Service Type</th>
+                            <th><i class="fa-solid fa-cash-register"></i> Amount (₦)</th>
+                            <th><i class="fa-regular fa-calendar"></i> Date</th>
+                            <th><i class="fa-solid fa-credit-card"></i> Payment Method</th>
+                            <th><i class="fa-solid fa-circle-check"></i> Status</th>
+                            <th><i class="fa-solid fa-gear"></i> Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for payment in payments %}
-                            <tr>
-                                <td>#{{ payment.id }}</td>
-                                <td>{{ payment.patient_name }}</td>
-                                <td>{{ payment.service_type }}</td>
-                                <td style="font-weight: bold;">{{ "₦{:,.2f}".format(payment.amount_paid) }}</td>
-                                <td>{{ payment.payment_date.strftime('%Y-%m-%d') }}</td>
+                            <tr data-aos="fade-up" data-aos-delay="{{ loop.index * 50 }}">
+                                <td><span style="font-weight: 600;">#{{ payment.id }}</span></td>
+                                <td>
+                                    <i class="fa-regular fa-user" style="color: var(--primary); margin-right: 0.5rem;"></i>
+                                    {{ payment.patient_name }}
+                                </td>
+                                <td>
+                                    <span style="background: var(--info); color: white; padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.85rem;">
+                                        {{ payment.service_type }}
+                                    </span>
+                                </td>
+                                <td style="font-weight: 700; color: var(--success);">
+                                    ₦{{ "{:,.2f}".format(payment.amount_paid) }}
+                                </td>
+                                <td>
+                                    <i class="fa-regular fa-calendar" style="color: var(--gray-500); margin-right: 0.5rem;"></i>
+                                    {{ payment.payment_date.strftime('%Y-%m-%d') }}
+                                </td>
                                 <td>
                                     <span class="payment-method">
                                         {% if payment.payment_method == 'Cash' %}
@@ -441,7 +815,7 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <div style="display: flex; gap: 5px;">
+                                    <div style="display: flex; gap: 0.5rem;">
                                         <a href="{{ url_for('billing_receipt', payment_id=payment.id) }}" 
                                            class="action-btn view-btn" title="View Receipt">
                                             <i class="fa-solid fa-eye"></i> View
@@ -481,10 +855,13 @@
                 {% endif %}
                 
                 <!-- Summary -->
-                <div style="padding: 15px; background: #f8f9fa; border-top: 1px solid #eee;">
-                    <strong>Summary:</strong> 
-                    {{ total_items }} payment(s) found. 
-                    Total Amount: <strong>₦{{ "₦{:,.2f}".format(total_amount) }}</strong>
+                <div class="summary-box">
+                    <span>
+                        <strong>Total Records:</strong> {{ total_items }} payment(s) found
+                    </span>
+                    <span>
+                        <strong>Total Amount:</strong> <span class="total-amount">₦{{ "{:,.2f}".format(total_amount) }}</span>
+                    </span>
                 </div>
                 
             {% else %}
@@ -492,7 +869,7 @@
                     <i class="fa-solid fa-receipt"></i>
                     <h3>No Payment Records Found</h3>
                     <p>No payments match your search criteria.</p>
-                    <a href="{{ url_for('payment_history') }}" class="reset-btn" style="margin-top: 15px;">
+                    <a href="{{ url_for('payment_history') }}" class="reset-btn" style="display: inline-flex;">
                         <i class="fa-solid fa-rotate-left"></i> Clear Filters
                     </a>
                 </div>
@@ -500,7 +877,17 @@
         </div>
     </div>
 
+    <!-- Scripts -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    
     <script>
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50
+        });
+
         // Set default date range to last 30 days if not specified
         document.addEventListener('DOMContentLoaded', function() {
             const startDateInput = document.getElementById('start_date');
@@ -513,6 +900,39 @@
                 
                 endDateInput.value = today.toISOString().split('T')[0];
                 startDateInput.value = thirtyDaysAgo.toISOString().split('T')[0];
+            }
+        });
+
+        // Export confirmation
+        document.querySelector('.export-btn')?.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (confirm('Export payment history to Excel?')) {
+                window.location.href = this.href;
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl+F to focus search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                document.getElementById('patient_name')?.focus();
+            }
+            // Ctrl+E to export
+            if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+                e.preventDefault();
+                document.querySelector('.export-btn')?.click();
+            }
+        });
+
+        // Filter form validation
+        document.querySelector('.filter-form')?.addEventListener('submit', function(e) {
+            const startDate = document.getElementById('start_date').value;
+            const endDate = document.getElementById('end_date').value;
+            
+            if (startDate && endDate && startDate > endDate) {
+                e.preventDefault();
+                alert('Start date cannot be after end date.');
             }
         });
     </script>

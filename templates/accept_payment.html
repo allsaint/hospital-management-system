@@ -3,101 +3,648 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Accept Payment | Billing & Revenue</title>
+    <title>Accept Payment | Billing & Revenue - All Saint Medical Center</title>
+    
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- AOS Animation Library -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    
+    <style>
+        /* ===== CONSISTENT DESIGN SYSTEM ===== */
+        :root {
+            --primary: #4361ee;
+            --primary-dark: #3a56d4;
+            --primary-light: #6c8cff;
+            --secondary: #7209b7;
+            --success: #06d6a0;
+            --warning: #ff9e00;
+            --danger: #ef476f;
+            --info: #00b4d8;
+            --dark: #0b0f1c;
+            --darker: #070b14;
+            --light: #f8f9ff;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1e293b;
+            --gray-900: #0f172a;
+            
+            --gradient-primary: linear-gradient(135deg, #4361ee 0%, #7209b7 100%);
+            --gradient-success: linear-gradient(135deg, #06d6a0 0%, #00b4d8 100%);
+            --gradient-warning: linear-gradient(135deg, #ff9e00 0%, #ef476f 100%);
+            
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.02);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1);
+            --shadow-2xl: 0 25px 50px -12px rgba(0,0,0,0.25);
+            
+            --border-radius: 12px;
+            --border-radius-lg: 16px;
+            --border-radius-xl: 24px;
+        }
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/accept_payment.css') }}">
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e6ecf5 100%);
+            color: var(--gray-800);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(67, 97, 238, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(114, 9, 183, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+            animation: gradientShift 15s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideInLeft {
+            from { transform: translateX(-30px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(30px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        /* ===== MAIN WRAPPER ===== */
+        .billing-wrapper {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        /* ===== PAGE HEADER ===== */
+        .page-header {
+            margin-bottom: 2.5rem;
+            animation: slideInLeft 0.8s ease-out;
+        }
+
+        .page-header h2 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--gray-900);
+            letter-spacing: -1px;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-header h2 i {
+            color: var(--primary);
+            background: rgba(67, 97, 238, 0.1);
+            padding: 0.75rem;
+            border-radius: 12px;
+        }
+
+        .page-header p {
+            color: var(--gray-500);
+            font-size: 1rem;
+            margin-left: 4rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .page-header p i {
+            color: var(--success);
+        }
+
+        /* ===== CARDS ===== */
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: var(--border-radius-xl);
+            box-shadow: var(--shadow-2xl);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            animation: fadeIn 0.8s ease-out;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--gradient-primary);
+        }
+
+        .card h3 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--gray-800);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .card h3 i {
+            color: var(--primary);
+            background: rgba(67, 97, 238, 0.1);
+            padding: 0.5rem;
+            border-radius: 10px;
+        }
+
+        /* ===== FORM GRID ===== */
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .details-grid > div {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        label i {
+            color: var(--primary);
+        }
+
+        input, select {
+            border: 2px solid var(--gray-200);
+            border-radius: var(--border-radius);
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+            font-family: 'Inter', sans-serif;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.15);
+            outline: none;
+            transform: translateY(-2px);
+        }
+
+        input::placeholder {
+            color: var(--gray-400);
+        }
+
+        /* ===== SUMMARY BOX ===== */
+        .summary-box {
+            background: var(--gray-100);
+            border-radius: var(--border-radius-lg);
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border: 2px dashed var(--gray-300);
+            transition: all 0.3s ease;
+        }
+
+        .summary-box:hover {
+            border-color: var(--primary);
+            background: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .summary-box > div {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--gray-200);
+            font-size: 1rem;
+        }
+
+        .summary-box > div:last-of-type {
+            border-bottom: none;
+        }
+
+        .summary-box .total {
+            margin-top: 0.5rem;
+            padding-top: 1rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--success);
+            border-top: 2px solid var(--gray-300);
+        }
+
+        .summary-box .total span:last-child {
+            font-size: 1.5rem;
+        }
+
+        /* ===== BUTTON GROUP ===== */
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 1rem;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            font-size: 1rem;
+            text-decoration: none;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn.success {
+            background: var(--gradient-success);
+            color: white;
+            box-shadow: 0 4px 10px rgba(6, 214, 160, 0.3);
+        }
+
+        .btn.success:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(6, 214, 160, 0.4);
+        }
+
+        .btn.cancel {
+            background: white;
+            color: var(--gray-700);
+            border: 2px solid var(--gray-200);
+        }
+
+        .btn.cancel:hover {
+            background: var(--gray-100);
+            border-color: var(--danger);
+            color: var(--danger);
+            transform: translateY(-3px);
+        }
+
+        .btn i {
+            font-size: 1.1rem;
+        }
+
+        /* ===== LOADING STATE ===== */
+        .loading {
+            position: relative;
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .billing-wrapper {
+                margin: 1rem auto;
+                padding: 0 1rem;
+            }
+            
+            .page-header h2 {
+                font-size: 1.8rem;
+            }
+            
+            .page-header p {
+                margin-left: 0;
+            }
+            
+            .card {
+                padding: 1.5rem;
+            }
+            
+            .details-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--gray-200);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
+        }
+
+        /* Validation styles */
+        input:invalid, select:invalid {
+            border-color: var(--danger);
+        }
+
+        input:invalid:focus, select:invalid:focus {
+            box-shadow: 0 0 0 4px rgba(239, 71, 111, 0.15);
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            background: var(--gray-800);
+            color: white;
+            text-align: center;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            font-size: 0.85rem;
+        }
+
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+        }
+    </style>
 </head>
 <body>
 
 <div class="billing-wrapper">
 
-    <!-- Header -->
+    <!-- Header with Back Button -->
     <div class="page-header">
-        <h2>Accept Payment</h2>
-        <p>Verify invoice and collect payment</p>
+        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <a href="{{ url_for('billing_dashboard') }}" class="btn cancel" style="flex: 0 0 auto; padding: 0.5rem 1rem;">
+                <i class="fa-solid fa-arrow-left"></i> Back
+            </a>
+            <h2>
+                <i class="fa-solid fa-credit-card"></i>
+                Accept Payment
+            </h2>
+        </div>
+        <p>
+            <i class="fa-solid fa-circle-check"></i>
+            Verify invoice details and collect payment from patient
+        </p>
     </div>
 
     <!-- Payment Form -->
-    <form method="POST" action="{{ url_for('billing_confirm_payment') }}">
+    <form method="POST" action="{{ url_for('billing_confirm_payment') }}" id="paymentForm">
 
-        <!-- Invoice Details -->
-        <div class="card">
-            <h3>Invoice Details</h3>
+        <!-- Invoice Details Card -->
+        <div class="card" data-aos="fade-up">
+            <h3>
+                <i class="fa-solid fa-file-invoice"></i>
+                Invoice Details
+            </h3>
 
             <div class="details-grid">
                 <div>
-                    <label>Patient Name</label>
-                    <input type="text" name="patient_name" id="patientName" required>
+                    <label>
+                        <i class="fa-regular fa-user"></i>
+                        Patient Name
+                    </label>
+                    <input type="text" 
+                           name="patient_name" 
+                           id="patientName" 
+                           placeholder="Enter patient full name" 
+                           required
+                           autocomplete="off">
                 </div>
 
                 <div>
-                    <label>Service Type</label>
+                    <label>
+                        <i class="fa-solid fa-stethoscope"></i>
+                        Service Type
+                    </label>
                     <select name="service_type" id="serviceType" required>
-                        <option value="">Select service type</option>
-                        <option value="pharmacy">Pharmacy</option>
-                        <option value="laboratory">Laboratory</option>
-                        <option value="consultation">Consultation</option>
-                        <option value="radiology">Radiology</option>
-                        <option value="other">Other</option>
+                        <option value="" disabled selected>Select service type</option>
+                        <option value="pharmacy">💊 Pharmacy</option>
+                        <option value="laboratory">🔬 Laboratory</option>
+                        <option value="consultation">👨‍⚕️ Consultation</option>
+                        <option value="radiology">🩻 Radiology</option>
+                        <option value="other">📋 Other</option>
                     </select>
                 </div>
 
                 <div>
-                    <label>Receipt Date</label>
+                    <label>
+                        <i class="fa-regular fa-calendar"></i>
+                        Receipt Date
+                    </label>
                     <input type="date" id="receiptDate" name="receipt_date" required>
                 </div>
             </div>
         </div>
 
-        <!-- Payment & Computation -->
-        <div class="card">
-            <h3>Payment & Financial Summary</h3>
+        <!-- Payment & Financial Summary Card -->
+        <div class="card" data-aos="fade-up" data-aos-delay="100">
+            <h3>
+                <i class="fa-solid fa-calculator"></i>
+                Payment & Financial Summary
+            </h3>
 
             <div class="details-grid">
-
                 <div>
-                    <label>Payment Method</label>
+                    <label>
+                        <i class="fa-solid fa-money-bill"></i>
+                        Payment Method
+                    </label>
                     <select name="payment_method" required>
-                        <option value="">Select payment method</option>
-                        <option value="Cash">Cash</option>
-                        <option value="POS">POS</option>
-                        <option value="Transfer">Bank Transfer</option>
+                        <option value="" disabled selected>Select payment method</option>
+                        <option value="Cash">💵 Cash</option>
+                        <option value="POS">💳 POS</option>
+                        <option value="Transfer">🏦 Bank Transfer</option>
+                        <option value="Card">💳 Card</option>
+                        <option value="Insurance">🛡️ Insurance</option>
                     </select>
                 </div>
 
                 <div>
-                    <label>Amount Paid (₦)</label>
-                    <input type="number" id="amountPaid" name="amount_paid" step="0.01" required>
+                    <label>
+                        <i class="fa-solid fa-cash-register"></i>
+                        Amount Paid (₦)
+                    </label>
+                    <input type="number" 
+                           id="amountPaid" 
+                           name="amount_paid" 
+                           step="0.01" 
+                           min="0"
+                           placeholder="0.00" 
+                           required>
                 </div>
 
                 <div>
-                    <label>VAT (%)</label>
-                    <input type="number" id="vat" name="vat" value="0" step="0.01">
+                    <label>
+                        <i class="fa-solid fa-percent"></i>
+                        VAT (%)
+                    </label>
+                    <input type="number" 
+                           id="vat" 
+                           name="vat" 
+                           value="0" 
+                           step="0.01" 
+                           min="0"
+                           max="100"
+                           placeholder="0">
                 </div>
 
                 <div>
-                    <label>Discount (₦)</label>
-                    <input type="number" id="discount" name="discount" value="0" step="0.01">
+                    <label>
+                        <i class="fa-solid fa-tag"></i>
+                        Discount (₦)
+                    </label>
+                    <input type="number" 
+                           id="discount" 
+                           name="discount" 
+                           value="0" 
+                           step="0.01" 
+                           min="0"
+                           placeholder="0">
                 </div>
             </div>
 
-            <!-- Computation Display -->
+            <!-- Real-time Computation Display -->
             <div class="summary-box">
-                <div><span>Subtotal:</span><span>₦<span id="subtotal">0.00</span></span></div>
-                <div><span>VAT:</span><span>₦<span id="vatAmount">0.00</span></span></div>
-                <div><span>Discount:</span><span>₦<span id="discountAmount">0.00</span></span></div>
+                <div>
+                    <span>
+                        <i class="fa-regular fa-receipt" style="color: var(--primary); margin-right: 0.5rem;"></i>
+                        Subtotal:
+                    </span>
+                    <span><span id="subtotal">0.00</span> ₦</span>
+                </div>
+                <div>
+                    <span>
+                        <i class="fa-solid fa-percent" style="color: var(--info); margin-right: 0.5rem;"></i>
+                        VAT:
+                    </span>
+                    <span><span id="vatAmount">0.00</span> ₦</span>
+                </div>
+                <div>
+                    <span>
+                        <i class="fa-solid fa-tag" style="color: var(--warning); margin-right: 0.5rem;"></i>
+                        Discount:
+                    </span>
+                    <span>₦ <span id="discountAmount">0.00</span></span>
+                </div>
                 <div class="total">
-                    <span>Grand Total:</span>
-                    <span>₦<span id="grandTotal">0.00</span></span>
+                    <span>
+                        <i class="fa-solid fa-sack-dollar" style="color: var(--success); margin-right: 0.5rem;"></i>
+                        Grand Total:
+                    </span>
+                    <span><span id="grandTotal">0.00</span> ₦</span>
                 </div>
             </div>
 
             <!-- Button Container -->
             <div class="button-group">
-                <button type="submit" class="btn success">
+                <button type="submit" class="btn success" id="submitBtn">
+                    <i class="fa-solid fa-check-circle"></i>
                     Confirm Payment
                 </button>
                 <a href="{{ url_for('billing_dashboard') }}" class="btn cancel">
+                    <i class="fa-solid fa-xmark"></i>
                     Cancel
                 </a>
             </div>
@@ -106,33 +653,157 @@
 
     </form>
 
+    <!-- Payment Tips Card -->
+    <!-- <div class="card" data-aos="fade-up" data-aos-delay="200" style="background: var(--gray-100);">
+        <h3 style="margin-bottom: 1rem;">
+            <i class="fa-solid fa-lightbulb" style="color: var(--warning);"></i>
+            Payment Tips
+        </h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <i class="fa-solid fa-circle-check" style="color: var(--success);"></i>
+                <span style="font-size: 0.95rem;">Verify patient details before processing</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <i class="fa-solid fa-circle-check" style="color: var(--success);"></i>
+                <span style="font-size: 0.95rem;">Confirm payment method with patient</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <i class="fa-solid fa-circle-check" style="color: var(--success);"></i>
+                <span style="font-size: 0.95rem;">Double-check all calculations</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <i class="fa-solid fa-circle-check" style="color: var(--success);"></i>
+                <span style="font-size: 0.95rem;">Provide receipt after successful payment</span>
+            </div>
+        </div>
+    </div> -->
+
 </div>
 
-<script>
-    // Default date
-    document.getElementById("receiptDate").valueAsDate = new Date();
+<!-- Scripts -->
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 
+<script>
+    // Initialize AOS
+    AOS.init({
+        duration: 800,
+        once: true,
+        offset: 50
+    });
+
+    // Set default date to today
+    document.addEventListener('DOMContentLoaded', function() {
+        const dateInput = document.getElementById("receiptDate");
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        dateInput.value = `${yyyy}-${mm}-${dd}`;
+        
+        // Initialize calculations
+        calculateTotals();
+    });
+
+    // Get input elements
     const amountPaid = document.getElementById("amountPaid");
     const vatInput = document.getElementById("vat");
     const discountInput = document.getElementById("discount");
 
+    // Calculation function with validation
     function calculateTotals() {
         let subtotal = parseFloat(amountPaid.value) || 0;
         let vatPercent = parseFloat(vatInput.value) || 0;
         let discount = parseFloat(discountInput.value) || 0;
 
+        // Validate inputs
+        if (subtotal < 0) subtotal = 0;
+        if (vatPercent < 0) vatPercent = 0;
+        if (vatPercent > 100) vatPercent = 100;
+        if (discount < 0) discount = 0;
+        if (discount > subtotal) discount = subtotal;
+
+        // Calculate amounts
         let vatAmount = (subtotal * vatPercent) / 100;
         let grandTotal = subtotal + vatAmount - discount;
 
+        // Update display with formatting
         document.getElementById("subtotal").textContent = subtotal.toFixed(2);
         document.getElementById("vatAmount").textContent = vatAmount.toFixed(2);
         document.getElementById("discountAmount").textContent = discount.toFixed(2);
         document.getElementById("grandTotal").textContent = grandTotal.toFixed(2);
+
+        // Update input values if they were out of bounds
+        amountPaid.value = subtotal;
+        vatInput.value = vatPercent;
+        discountInput.value = discount;
+
+        // Visual feedback for discount exceeding subtotal
+        if (discount > subtotal) {
+            discountInput.style.borderColor = 'var(--danger)';
+        } else {
+            discountInput.style.borderColor = '';
+        }
     }
 
+    // Add event listeners
     amountPaid.addEventListener("input", calculateTotals);
     vatInput.addEventListener("input", calculateTotals);
     discountInput.addEventListener("input", calculateTotals);
+
+    // Format number inputs to prevent negative values
+    [amountPaid, vatInput, discountInput].forEach(input => {
+        input.addEventListener('keydown', function(e) {
+            if (e.key === '-' || e.key === 'e') {
+                e.preventDefault();
+            }
+        });
+    });
+
+    // Form submission with loading state
+    document.getElementById('paymentForm')?.addEventListener('submit', function(e) {
+        const submitBtn = document.getElementById('submitBtn');
+        const grandTotal = parseFloat(document.getElementById('grandTotal').textContent);
+        
+        // Validate payment amount
+        if (grandTotal <= 0) {
+            e.preventDefault();
+            alert('Please enter a valid payment amount greater than 0.');
+            return;
+        }
+
+        // Add loading state
+        submitBtn.classList.add('loading');
+        submitBtn.innerHTML = `
+            <i class="fa-solid fa-circle-notch fa-spin"></i>
+            Processing Payment...
+        `;
+
+        // Disable submit button to prevent double submission
+        submitBtn.disabled = true;
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl+Enter to submit form
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            document.getElementById('paymentForm').requestSubmit();
+        }
+        // Escape to cancel
+        if (e.key === 'Escape') {
+            window.location.href = "{{ url_for('billing_dashboard') }}";
+        }
+    });
+
+    // Auto-format currency on blur
+    function formatCurrency(input) {
+        let value = parseFloat(input.value) || 0;
+        input.value = value.toFixed(2);
+    }
+
+    amountPaid.addEventListener('blur', function() { formatCurrency(this); });
+    discountInput.addEventListener('blur', function() { formatCurrency(this); });
 </script>
 
 </body>
