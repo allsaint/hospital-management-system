@@ -914,6 +914,16 @@
                         {% endfor %}
                     </tbody>
                 </table>
+                <!-- Add this after the table but before the closing table-card div -->
+                <div class="table-footer p-3 border-top d-flex justify-content-between align-items-center">
+                    <div class="text-muted">
+                        <i class="bi bi-info-circle"></i>
+                        <small>Expired drugs are highlighted in red. You can remove them permanently.</small>
+                    </div>
+                    <button class="btn btn-danger" id="bulkDeleteExpiredBtn" data-bs-toggle="modal" data-bs-target="#bulkDeleteExpiredModal">
+                        <i class="bi bi-trash3"></i> Remove All Expired
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -1062,5 +1072,47 @@
             });
         });
     </script>
+    <!-- Add this at the end of the scripts section -->
+<!-- Bulk Delete Expired Modal -->
+<div class="modal fade" id="bulkDeleteExpiredModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Remove Expired Drugs
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to remove all expired drugs from the database?</p>
+                <p class="text-danger"><strong>This action cannot be undone!</strong></p>
+                <div class="alert alert-warning">
+                    <i class="bi bi-info-circle"></i>
+                    The following drugs will be removed:
+                </div>
+                <div class="expired-drug-list" style="max-height: 200px; overflow-y: auto;">
+                    {% for item in stock %}
+                        {% if item.status == 'EXPIRED' %}
+                            <div class="border-bottom py-2">
+                                <span class="badge bg-danger me-2">Expired</span>
+                                {{ item.name }} {{ item.strength }} (Qty: {{ item.quantity }})
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x"></i> Cancel
+                </button>
+                <form action="{{ url_for('admin_delete_expired_drugs') }}" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger" id="confirmBulkDelete">
+                        <i class="bi bi-trash3"></i> Remove All Expired
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 </body>
 </html>

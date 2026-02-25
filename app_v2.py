@@ -4973,7 +4973,56 @@ def add_missing_columns():
     finally:
         cursor.close()
         conn.close()
-
+@app.route('/admin/drugs/delete-expired', methods=['POST'])
+def admin_delete_expired_drugs():
+    """Delete all expired drugs from the database."""
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # First, get list of expired drugs for logging
+        cursor.execute("""
+            SELECT id, name, strength, stock_quantity 
+            FROM drugs 
+            WHERE expiry_date < CURRENT_DATE AND stock_quantity > 0
+        """)
+        
+        expired_drugs = cursor.fetchall()
+        
+        if not expired_drugs:
+            flash("No expired drugs found to delete.", "info")
+            return redirect(url_for('admin_pharmacy_stock'))
+        
+        # Log what will be deleted
+        drug_names = [f"{d[1]} {d[2]} (Qty: {d[3]})" for d in expired_drugs]
+        
+        # Delete expired drugs
+        cursor.execute("DELETE FROM drugs WHERE expiry_date < CURRENT_DATE")
+        
+        conn.commit()
+        
+        # Log the action
+        log_admin_action(
+            session['admin_id'], 
+            'DELETE_EXPIRED_DRUGS', 
+            f'Removed {len(expired_drugs)} expired drugs: {", ".join(drug_names)}'
+        )
+        
+        flash(f"Successfully removed {len(expired_drugs)} expired drug(s) from database.", "success")
+        
+    except Exception as e:
+        conn.rollback()
+        app.logger.error(f"Error deleting expired drugs: {e}")
+        flash(f"Error deleting expired drugs: {str(e)}", "danger")
+    
+    finally:
+        cursor.close()
+        conn.close()
+    
+    return redirect(url_for('admin_pharmacy_stock'))
 # Update your main function to include this:
 if __name__ == "__main__":
     create_tables()
