@@ -3,27 +3,718 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pharmacy Revenue Report - Admin Panel</title>
+    <title>Pharmacy Revenue Report - Admin Panel | All Saint Medical Center</title>
+    
+    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- AOS Animation Library -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
     <style>
-        .nav-gradient { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .revenue-card { background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); }
-        .total-revenue { font-size: 2rem; font-weight: bold; color: #198754; }
-        .period-selector .btn.active { background-color: #667eea; color: white; }
-        .table-hover tbody tr:hover { background-color: rgba(0,0,0,0.02); }
-        .top-drugs .badge { font-size: 0.8rem; }
+        /* ===== CONSISTENT DESIGN SYSTEM ===== */
+        :root {
+            --primary: #4361ee;
+            --primary-dark: #3a56d4;
+            --primary-light: #6c8cff;
+            --secondary: #7209b7;
+            --success: #06d6a0;
+            --warning: #ff9e00;
+            --danger: #ef476f;
+            --info: #00b4d8;
+            --dark: #0b0f1c;
+            --darker: #070b14;
+            --light: #f8f9ff;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1e293b;
+            --gray-900: #0f172a;
+            
+            --gradient-primary: linear-gradient(135deg, #4361ee 0%, #7209b7 100%);
+            --gradient-success: linear-gradient(135deg, #06d6a0 0%, #00b4d8 100%);
+            --gradient-warning: linear-gradient(135deg, #ff9e00 0%, #ef476f 100%);
+            
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.02);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1);
+            --shadow-2xl: 0 25px 50px -12px rgba(0,0,0,0.25);
+            
+            --border-radius: 12px;
+            --border-radius-lg: 16px;
+            --border-radius-xl: 24px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e6ecf5 100%);
+            color: var(--gray-800);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(67, 97, 238, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(114, 9, 183, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+            animation: gradientShift 15s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(30px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        @keyframes countUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ===== CONSISTENT NAVIGATION ===== */
+        .nav-gradient {
+            background: var(--gradient-primary);
+            padding: 0.75rem 1.5rem;
+            box-shadow: var(--shadow-lg);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            animation: slideInRight 0.5s ease-out;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.35rem;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: white !important;
+            transition: all 0.3s ease;
+        }
+
+        .navbar-brand:hover {
+            transform: translateY(-2px);
+            text-shadow: 0 2px 10px rgba(255,255,255,0.3);
+        }
+
+        .navbar-brand i {
+            font-size: 2rem;
+            filter: drop-shadow(0 2px 5px rgba(0,0,0,0.2));
+            animation: float 3s infinite;
+        }
+
+        .navbar-brand .badge {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            font-size: 0.7rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+        }
+
+        .navbar-text {
+            color: rgba(255,255,255,0.95) !important;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .navbar-text i {
+            font-size: 1.25rem;
+        }
+
+        .btn-outline-light {
+            border-width: 2px;
+            font-weight: 600;
+            padding: 0.5rem 1.25rem;
+            border-radius: 30px;
+            transition: all 0.3s ease;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-outline-light:hover {
+            background: white;
+            color: var(--primary) !important;
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* ===== PAGE HEADER ===== */
+        .page-header {
+            margin-bottom: 2rem;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        .page-header h3 {
+            font-weight: 800;
+            color: var(--gray-800);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .page-header h3 i {
+            color: var(--primary);
+            font-size: 2rem;
+            background: rgba(67, 97, 238, 0.1);
+            padding: 0.5rem;
+            border-radius: 12px;
+        }
+
+        .page-header p {
+            color: var(--gray-500);
+            margin-left: 3.5rem;
+        }
+
+        .btn-print {
+            background: var(--success);
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 30px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-print:hover {
+            background: #05b386;
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-2xl);
+            color: white;
+        }
+
+        .btn-print i {
+            font-size: 1.25rem;
+        }
+
+        /* ===== FILTER CARD ===== */
+        .filter-card {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-lg);
+            animation: slideInRight 0.8s ease-out;
+            border: 1px solid rgba(255,255,255,0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        .filter-card .card-header {
+            background: transparent;
+            border: none;
+            padding: 0 0 1rem 0;
+        }
+
+        .filter-card h6 {
+            font-weight: 700;
+            color: var(--gray-700);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0;
+        }
+
+        .filter-card h6 i {
+            color: var(--primary);
+        }
+
+        .period-selector {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .period-btn {
+            padding: 0.5rem 1.5rem;
+            border-radius: 30px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: 2px solid var(--gray-200);
+            background: white;
+            color: var(--gray-700);
+            cursor: pointer;
+        }
+
+        .period-btn:hover {
+            border-color: var(--primary);
+            background: var(--gray-100);
+            transform: translateY(-2px);
+        }
+
+        .period-btn.active {
+            background: var(--gradient-primary);
+            border-color: transparent;
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-label i {
+            color: var(--primary);
+        }
+
+        .form-control, .form-select {
+            border: 2px solid var(--gray-200);
+            border-radius: var(--border-radius);
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .btn-generate {
+            background: var(--gradient-primary);
+            border: none;
+            color: white;
+            padding: 0.75rem;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-generate:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        /* ===== REVENUE CARD ===== */
+        .revenue-card {
+            background: linear-gradient(135deg, white, var(--gray-100));
+            border-radius: var(--border-radius-xl);
+            overflow: hidden;
+            box-shadow: var(--shadow-2xl);
+            animation: fadeIn 0.8s ease-out;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+
+        .revenue-card .card-body {
+            padding: 2rem;
+        }
+
+        .revenue-card h5 {
+            font-weight: 700;
+            color: var(--gray-800);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .revenue-card h5 i {
+            color: var(--primary);
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s ease;
+            text-align: center;
+            height: 100%;
+            border: 1px solid var(--gray-200);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .stat-card h6 {
+            color: var(--gray-500);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+
+        .total-revenue {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--success);
+            line-height: 1.2;
+            margin-bottom: 0.25rem;
+            animation: countUp 1s ease-out;
+        }
+
+        .avg-transaction {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--primary);
+            line-height: 1.2;
+            margin-bottom: 0.25rem;
+        }
+
+        .period-info {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--gray-200);
+        }
+
+        .period-info h6 {
+            color: var(--gray-700);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .period-info p {
+            margin-bottom: 0;
+            line-height: 1.6;
+        }
+
+        /* ===== TOP DRUGS TABLE ===== */
+        .top-drugs-table {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--gray-200);
+        }
+
+        .top-drugs-table thead th {
+            background: var(--gray-100);
+            color: var(--gray-700);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 1rem;
+            border-bottom: 2px solid var(--gray-300);
+        }
+
+        .top-drugs-table tbody td {
+            padding: 0.75rem 1rem;
+            vertical-align: middle;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .top-drugs-table .badge {
+            padding: 0.4rem 0.75rem;
+            font-weight: 500;
+            font-size: 0.8rem;
+        }
+
+        /* ===== TRANSACTIONS TABLE ===== */
+        .transactions-card {
+            background: white;
+            border-radius: var(--border-radius-xl);
+            overflow: hidden;
+            box-shadow: var(--shadow-2xl);
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        .transactions-card .card-header {
+            background: white;
+            border-bottom: 2px solid var(--gray-200);
+            padding: 1.5rem;
+        }
+
+        .transactions-card .card-header h6 {
+            font-weight: 700;
+            color: var(--gray-800);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0;
+        }
+
+        .transactions-card .card-header h6 i {
+            color: var(--primary);
+        }
+
+        .transactions-table {
+            margin-bottom: 0;
+        }
+
+        .transactions-table thead th {
+            background: var(--gradient-primary);
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 1.25rem 1rem;
+            border: none;
+        }
+
+        .transactions-table thead th i {
+            margin-right: 0.5rem;
+        }
+
+        .transactions-table tbody tr {
+            transition: all 0.3s ease;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .transactions-table tbody tr:hover {
+            background: var(--gray-100);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .transactions-table tbody td {
+            padding: 1rem;
+            vertical-align: middle;
+            color: var(--gray-700);
+        }
+
+        .transactions-table tfoot {
+            background: var(--gray-100);
+            border-top: 2px solid var(--gray-300);
+        }
+
+        .transactions-table tfoot td {
+            padding: 1rem;
+            font-weight: 600;
+        }
+
+        .badge-patient {
+            background: linear-gradient(135deg, var(--info), var(--primary));
+            color: white;
+            padding: 0.4rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+
+        /* ===== EMPTY STATE ===== */
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--gray-500);
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            animation: float 3s infinite;
+        }
+
+        .empty-state h5 {
+            font-weight: 700;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+        }
+
+        .empty-state p {
+            margin-bottom: 0;
+        }
+
+        /* ===== ALERTS ===== */
+        .alert {
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.5rem;
+            animation: slideInRight 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            border-left: 4px solid;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+            border-left-color: var(--success);
+        }
+
+        .alert-danger {
+            background: linear-gradient(135deg, #fee2e2, #fecaca);
+            border-left-color: var(--danger);
+        }
+
+        .alert-warning {
+            background: linear-gradient(135deg, #fef9c3, #fef08a);
+            border-left-color: var(--warning);
+        }
+
+        .alert-info {
+            background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+            border-left-color: var(--info);
+        }
+
+        /* ===== PRINT STYLES ===== */
+        @media print {
+            .nav-gradient, .filter-card, .btn-print, footer {
+                display: none;
+            }
+            
+            body {
+                background: white;
+            }
+            
+            .revenue-card, .transactions-card {
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+            
+            .transactions-table thead th {
+                background: #f0f0f0;
+                color: black;
+            }
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 1rem;
+            }
+            
+            .page-header p {
+                margin-left: 0;
+            }
+            
+            .btn-print {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .filter-card .row {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .period-selector {
+                flex-wrap: wrap;
+            }
+            
+            .period-btn {
+                flex: 1;
+                text-align: center;
+            }
+            
+            .stat-card {
+                margin-bottom: 1rem;
+            }
+            
+            .transactions-table thead th {
+                font-size: 0.8rem;
+                padding: 1rem 0.75rem;
+            }
+            
+            .transactions-table tbody td {
+                padding: 0.75rem;
+                font-size: 0.85rem;
+            }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--gray-200);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
+        }
     </style>
 </head>
 <body>
+    <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark nav-gradient">
         <div class="container-fluid">
             <a class="navbar-brand" href="{{ url_for('admin_dashboard') }}">
-                <i class="bi bi-hospital"></i> All Saint Medical Center
+                <i class="bi bi-hospital"></i> 
+                <span>All Saint Medical Center</span>
+                <span class="badge">Revenue Report</span>
             </a>
             <div class="navbar-nav ms-auto">
                 <span class="navbar-text me-3">
-                    <i class="bi bi-person-circle"></i> {{ admin_name }}
+                    <i class="bi bi-person-circle"></i>
+                    <span>{{ admin_name }}</span>
                 </span>
                 <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-light btn-sm">
                     <i class="bi bi-house"></i> Dashboard
@@ -33,26 +724,31 @@
     </nav>
 
     <div class="container-fluid py-4">
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h3><i class="bi bi-currency-exchange"></i> Pharmacy Revenue Report</h3>
-                        <p class="text-muted mb-0">Analyze pharmacy sales and revenue trends</p>
-                    </div>
-                    <div>
-                        <button class="btn btn-success" onclick="printReport()">
-                            <i class="bi bi-printer"></i> Print Report
-                        </button>
-                    </div>
-                </div>
+        <!-- Page Header -->
+        <div class="page-header d-flex justify-content-between align-items-center">
+            <div>
+                <h3>
+                    <i class="bi bi-currency-exchange"></i>
+                    Pharmacy Revenue Report
+                </h3>
+                <p class="text-muted mb-0">
+                    <i class="bi bi-dot"></i> Analyze pharmacy sales and revenue trends
+                </p>
+            </div>
+            <div>
+                <button class="btn-print" onclick="printReport()">
+                    <i class="bi bi-printer"></i>
+                    <span>Print Report</span>
+                </button>
             </div>
         </div>
 
+        <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
                     <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        <i class="bi bi-{% if category == 'success' %}check-circle-fill{% elif category == 'danger' %}exclamation-triangle-fill{% else %}info-circle-fill{% endif %}"></i>
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
@@ -61,33 +757,45 @@
         {% endwith %}
 
         <!-- Report Period Selection -->
-        <div class="card mb-4">
+        <div class="filter-card">
             <div class="card-header">
-                <h6 class="mb-0"><i class="bi bi-calendar-range"></i> Select Report Period</h6>
+                <h6>
+                    <i class="bi bi-calendar-range"></i>
+                    Select Report Period
+                </h6>
             </div>
             <div class="card-body">
-                <form method="POST" class="row g-3">
+                <form method="POST" class="row g-4">
                     <div class="col-md-3">
-                        <label class="form-label">Report Type</label>
-                        <div class="period-selector btn-group" role="group">
-                            <button type="button" class="btn btn-outline-secondary {% if period == 'daily' %}active{% endif %}" 
-                                    onclick="selectPeriod('daily')">Daily</button>
-                            <button type="button" class="btn btn-outline-secondary {% if period == 'weekly' %}active{% endif %}" 
-                                    onclick="selectPeriod('weekly')">Weekly</button>
-                            <button type="button" class="btn btn-outline-secondary {% if period == 'monthly' %}active{% endif %}" 
-                                    onclick="selectPeriod('monthly')">Monthly</button>
+                        <label class="form-label">
+                            <i class="bi bi-clock-history"></i>
+                            Report Type
+                        </label>
+                        <div class="period-selector">
+                            <button type="button" class="period-btn {% if period == 'daily' %}active{% endif %}" 
+                                    onclick="selectPeriod('daily', this)">Daily</button>
+                            <button type="button" class="period-btn {% if period == 'weekly' %}active{% endif %}" 
+                                    onclick="selectPeriod('weekly', this)">Weekly</button>
+                            <button type="button" class="period-btn {% if period == 'monthly' %}active{% endif %}" 
+                                    onclick="selectPeriod('monthly', this)">Monthly</button>
                         </div>
                         <input type="hidden" name="period" id="period" value="{{ period }}">
                     </div>
                     
                     <div class="col-md-3" id="daily-section" {% if period != 'daily' %}style="display:none;"{% endif %}>
-                        <label for="day" class="form-label">Select Date</label>
+                        <label for="day" class="form-label">
+                            <i class="bi bi-calendar-day"></i>
+                            Select Date
+                        </label>
                         <input type="date" class="form-control" id="day" name="day" 
                                value="{% if selected_day %}{{ selected_day }}{% elif today_str %}{{ today_str }}{% endif %}">
                     </div>
                     
                     <div class="col-md-3" id="month-section" {% if period != 'monthly' %}style="display:none;"{% endif %}>
-                        <label for="month" class="form-label">Select Month</label>
+                        <label for="month" class="form-label">
+                            <i class="bi bi-calendar-month"></i>
+                            Select Month
+                        </label>
                         <select class="form-select" id="month" name="month">
                             {% for month_num, month_name in months %}
                             <option value="{{ month_num }}" {% if selected_month == month_num %}selected{% endif %}>
@@ -97,8 +805,11 @@
                         </select>
                     </div>
                     
-                    <div class="col-md-3" id="year-section" {% if period not in ['monthly'] %}style="display:none;"{% endif %}>
-                        <label for="year" class="form-label">Select Year</label>
+                    <div class="col-md-3" id="year-section" {% if period not in ['monthly', 'weekly'] %}style="display:none;"{% endif %}>
+                        <label for="year" class="form-label">
+                            <i class="bi bi-calendar"></i>
+                            Select Year
+                        </label>
                         <select class="form-select" id="year" name="year">
                             {% for year in years %}
                             <option value="{{ year }}" {% if selected_year == year %}selected{% endif %}>
@@ -109,8 +820,9 @@
                     </div>
                     
                     <div class="col-md-3 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-search"></i> Generate Report
+                        <button type="submit" class="btn-generate w-100">
+                            <i class="bi bi-search"></i>
+                            Generate Report
                         </button>
                     </div>
                 </form>
@@ -118,72 +830,88 @@
         </div>
 
         <!-- Revenue Summary -->
-        <div class="card mb-4 revenue-card">
+        <div class="revenue-card">
             <div class="card-body">
-                <div class="row">
+                <div class="row g-4">
+                    <!-- Left Column -->
                     <div class="col-md-6">
-                        <h5 class="mb-3">Revenue Summary</h5>
-                        <div class="row">
+                        <h5>
+                            <i class="bi bi-graph-up"></i>
+                            Revenue Summary
+                        </h5>
+                        <div class="row g-4">
                             <div class="col-6">
-                                <div class="card bg-white mb-3">
-                                    <div class="card-body text-center">
-                                        <h6 class="text-muted">Total Revenue</h6>
-                                        <h3 class="total-revenue">₦{{ "%.2f"|format(total_revenue) }}</h3>
-                                        <small class="text-muted">{{ period|title }} Report</small>
-                                    </div>
+                                <div class="stat-card" data-aos="fade-up" data-aos-delay="100">
+                                    <h6>Total Revenue</h6>
+                                    <div class="total-revenue">₦{{ "%.2f"|format(total_revenue) }}</div>
+                                    <small class="text-muted">{{ period|title }} Report</small>
                                 </div>
                             </div>
                             <div class="col-6">
-                                <div class="card bg-white mb-3">
-                                    <div class="card-body text-center">
-                                        <h6 class="text-muted">Avg Transaction</h6>
-                                        <h3 class="text-primary">₦{{ "%.2f"|format(avg_transaction) }}</h3>
-                                        <small class="text-muted">Per sale</small>
-                                    </div>
+                                <div class="stat-card" data-aos="fade-up" data-aos-delay="200">
+                                    <h6>Avg Transaction</h6>
+                                    <div class="avg-transaction">₦{{ "%.2f"|format(avg_transaction) }}</div>
+                                    <small class="text-muted">Per sale</small>
                                 </div>
                             </div>
-                        </div>
-                        <div class="card bg-white">
-                            <div class="card-body">
-                                <h6><i class="bi bi-calendar-check"></i> Report Period</h6>
-                                <p class="mb-0">
-                                    <strong>{{ start_date.strftime('%B %d, %Y') }}</strong> 
-                                    {% if end_date != start_date %}
-                                    to <strong>{{ end_date.strftime('%B %d, %Y') }}</strong>
-                                    {% endif %}
-                                    <br>
-                                    <span class="text-muted">{{ sales|length }} transactions</span>
-                                </p>
+                            <div class="col-12">
+                                <div class="period-info" data-aos="fade-up" data-aos-delay="300">
+                                    <h6>
+                                        <i class="bi bi-calendar-check"></i>
+                                        Report Period
+                                    </h6>
+                                    <p>
+                                        <strong>{{ start_date.strftime('%B %d, %Y') }}</strong> 
+                                        {% if end_date != start_date %}
+                                        <i class="bi bi-arrow-right mx-2"></i>
+                                        <strong>{{ end_date.strftime('%B %d, %Y') }}</strong>
+                                        {% endif %}
+                                    </p>
+                                    <p class="text-muted mb-0">
+                                        <i class="bi bi-receipt"></i>
+                                        {{ sales|length }} transactions recorded
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
                     
+                    <!-- Right Column - Top Selling Drugs -->
                     <div class="col-md-6">
-                        <h5 class="mb-3">Top Selling Drugs</h5>
-                        <div class="table-responsive">
+                        <h5>
+                            <i class="bi bi-trophy"></i>
+                            Top Selling Drugs
+                        </h5>
+                        <div class="top-drugs-table">
                             <table class="table table-sm">
                                 <thead>
                                     <tr>
                                         <th>Drug Name</th>
                                         <th>Strength</th>
-                                        <th>Quantity</th>
-                                        <th>Revenue</th>
+                                        <th class="text-center">Quantity</th>
+                                        <th class="text-end">Revenue</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for drug in top_drugs %}
                                     <tr>
-                                        <td>{{ drug[0] }}</td>
-                                        <td>{{ drug[1] }}</td>
                                         <td>
+                                            <i class="bi bi-capsule me-1" style="color: var(--primary);"></i>
+                                            <strong>{{ drug[0] }}</strong>
+                                        </td>
+                                        <td>{{ drug[1] }}</td>
+                                        <td class="text-center">
                                             <span class="badge bg-primary">{{ drug[2] }}</span>
                                         </td>
-                                        <td><strong>₦{{ "%.2f"|format(drug[3]) }}</strong></td>
+                                        <td class="text-end">
+                                            <strong>₦{{ "%.2f"|format(drug[3]) }}</strong>
+                                        </td>
                                     </tr>
                                     {% else %}
                                     <tr>
-                                        <td colspan="4" class="text-center text-muted">
-                                            No drug sales data for this period
+                                        <td colspan="4" class="text-center text-muted py-4">
+                                            <i class="bi bi-capsule display-6 mb-2"></i>
+                                            <p class="mb-0">No drug sales data for this period</p>
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -196,60 +924,80 @@
         </div>
 
         <!-- Detailed Transactions -->
-        <div class="card">
+        <div class="transactions-card">
             <div class="card-header">
-                <h6 class="mb-0"><i class="bi bi-receipt"></i> Detailed Transactions</h6>
+                <h6>
+                    <i class="bi bi-receipt"></i>
+                    Detailed Transactions
+                    {% if sales %}
+                    <span class="badge bg-primary ms-2">{{ sales|length }} records</span>
+                    {% endif %}
+                </h6>
             </div>
-            <div class="card-body">
+            <div class="card-body p-0">
                 {% if sales %}
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="table transactions-table">
                         <thead>
                             <tr>
-                                <th>Receipt #</th>
-                                <th>Patient Name</th>
-                                <th>Patient ID</th>
-                                <th>Amount</th>
-                                <th>Pharmacist</th>
-                                <th>Date & Time</th>
+                                <th><i class="bi bi-receipt"></i> Receipt #</th>
+                                <th><i class="bi bi-person"></i> Patient Name</th>
+                                <th><i class="bi bi-person-badge"></i> Patient ID</th>
+                                <th><i class="bi bi-cash"></i> Amount</th>
+                                <th><i class="bi bi-person-circle"></i> Pharmacist</th>
+                                <th><i class="bi bi-clock"></i> Date & Time</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for sale in sales %}
                             <tr>
-                                <td><strong>#{{ sale[0] }}</strong></td>
+                                <td>
+                                    <span class="fw-bold">#{{ sale[0] }}</span>
+                                </td>
                                 <td>{{ sale[1] or 'Walk-in Customer' }}</td>
                                 <td>
                                     {% if sale[2] %}
-                                        <span class="badge bg-info">{{ sale[2] }}</span>
+                                        <span class="badge-patient">{{ sale[2] }}</span>
                                     {% else %}
-                                        <span class="text-muted">N/A</span>
+                                        <span class="text-muted">—</span>
                                     {% endif %}
                                 </td>
-                                <td><strong>₦{{ "%.2f"|format(sale[3]) }}</strong></td>
-                                <td>{{ sale[5] or 'System' }}</td>
+                                <td>
+                                    <span class="fw-bold text-success">₦{{ "%.2f"|format(sale[3]) }}</span>
+                                </td>
+                                <td>
+                                    <i class="bi bi-person me-1"></i>
+                                    {{ sale[5] or 'System' }}
+                                </td>
                                 <td>
                                     {% if sale[4] %}
+                                        <i class="bi bi-clock me-1"></i>
                                         {{ sale[4].strftime('%Y-%m-%d %H:%M') }}
                                     {% else %}
-                                        <span class="text-muted">N/A</span>
+                                        <span class="text-muted">—</span>
                                     {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                         <tfoot>
-                            <tr class="table-light">
-                                <td colspan="3" class="text-end"><strong>Total:</strong></td>
-                                <td><strong class="total-revenue">₦{{ "%.2f"|format(total_revenue) }}</strong></td>
-                                <td colspan="2">{{ sales|length }} transactions</td>
+                            <tr>
+                                <td colspan="3" class="text-end">
+                                    <strong>Total:</strong>
+                                </td>
+                                <td>
+                                    <strong class="total-revenue" style="font-size: 1.2rem;">₦{{ "%.2f"|format(total_revenue) }}</strong>
+                                </td>
+                                <td colspan="2">
+                                    <span class="text-muted">{{ sales|length }} transactions</span>
+                                </td>
                             </tr>
                         </tfoot>
                     </table>
                 </div>
                 {% else %}
-                <div class="text-center py-5">
-                    <i class="bi bi-receipt display-6 text-muted mb-3"></i>
+                <div class="empty-state">
+                    <i class="bi bi-receipt"></i>
                     <h5>No Sales Data Found</h5>
                     <p class="text-muted">No pharmacy sales recorded for the selected period</p>
                 </div>
@@ -258,21 +1006,32 @@
         </div>
     </div>
 
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    
     <script>
-        function selectPeriod(periodType) {
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50
+        });
+
+        function selectPeriod(periodType, element) {
+            // Update hidden input
             document.getElementById('period').value = periodType;
             
             // Show/hide relevant sections
             document.getElementById('daily-section').style.display = periodType === 'daily' ? 'block' : 'none';
             document.getElementById('month-section').style.display = periodType === 'monthly' ? 'block' : 'none';
-            document.getElementById('year-section').style.display = periodType === 'monthly' ? 'block' : 'none';
+            document.getElementById('year-section').style.display = periodType === 'monthly' || periodType === 'weekly' ? 'block' : 'none';
             
             // Update active buttons
-            document.querySelectorAll('.period-selector .btn').forEach(btn => {
+            document.querySelectorAll('.period-btn').forEach(btn => {
                 btn.classList.remove('active');
             });
-            event.target.classList.add('active');
+            element.classList.add('active');
         }
 
         function printReport() {
@@ -286,6 +1045,39 @@
                 const today = new Date().toISOString().split('T')[0];
                 dayInput.value = today;
             }
+        });
+
+        // Auto-dismiss alerts
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                document.querySelectorAll('.alert').forEach(alert => {
+                    new bootstrap.Alert(alert).close();
+                });
+            }, 5000);
+        });
+
+        // Add animation to numbers
+        function animateNumbers() {
+            document.querySelectorAll('.total-revenue, .avg-transaction').forEach(el => {
+                const value = parseFloat(el.innerText.replace('₦', '').replace(',', ''));
+                if (!isNaN(value)) {
+                    el.setAttribute('data-value', value);
+                }
+            });
+        }
+        animateNumbers();
+
+        // Keyboard shortcut for print
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+                e.preventDefault();
+                printReport();
+            }
+        });
+
+        // Tooltips for info icons
+        document.querySelectorAll('[title]').forEach(el => {
+            new bootstrap.Tooltip(el);
         });
     </script>
 </body>

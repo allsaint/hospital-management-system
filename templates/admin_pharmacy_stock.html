@@ -3,29 +3,693 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pharmacy Stock Report - Admin Panel</title>
+    <title>Pharmacy Stock Report - Admin Panel | All Saint Medical Center</title>
+    
+    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- AOS Animation Library -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    
+    <!-- DataTables -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    
     <style>
-        .badge-expired { background-color: #dc3545; }
-        .badge-expiring { background-color: #ffc107; color: #000; }
-        .badge-low { background-color: #0dcaf0; }
-        .badge-good { background-color: #198754; }
-        .nav-gradient { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .filter-btn.active { background-color: #667eea; color: white; }
-        .stock-table td { vertical-align: middle; }
-        .total-value { font-weight: bold; color: #198754; }
+        /* ===== CONSISTENT DESIGN SYSTEM ===== */
+        :root {
+            --primary: #4361ee;
+            --primary-dark: #3a56d4;
+            --primary-light: #6c8cff;
+            --secondary: #7209b7;
+            --success: #06d6a0;
+            --warning: #ff9e00;
+            --danger: #ef476f;
+            --info: #00b4d8;
+            --expired: #ef476f;
+            --expiring: #ff9e00;
+            --low-stock: #00b4d8;
+            --good-stock: #06d6a0;
+            --dark: #0b0f1c;
+            --darker: #070b14;
+            --light: #f8f9ff;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1e293b;
+            --gray-900: #0f172a;
+            
+            --gradient-primary: linear-gradient(135deg, #4361ee 0%, #7209b7 100%);
+            --gradient-success: linear-gradient(135deg, #06d6a0 0%, #00b4d8 100%);
+            --gradient-warning: linear-gradient(135deg, #ff9e00 0%, #ef476f 100%);
+            
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.02);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1);
+            --shadow-2xl: 0 25px 50px -12px rgba(0,0,0,0.25);
+            
+            --border-radius: 12px;
+            --border-radius-lg: 16px;
+            --border-radius-xl: 24px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e6ecf5 100%);
+            color: var(--gray-800);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(67, 97, 238, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(114, 9, 183, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+            animation: gradientShift 15s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(30px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        /* ===== CONSISTENT NAVIGATION ===== */
+        .nav-gradient {
+            background: var(--gradient-primary);
+            padding: 0.75rem 1.5rem;
+            box-shadow: var(--shadow-lg);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            animation: slideInRight 0.5s ease-out;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.35rem;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: white !important;
+            transition: all 0.3s ease;
+        }
+
+        .navbar-brand:hover {
+            transform: translateY(-2px);
+            text-shadow: 0 2px 10px rgba(255,255,255,0.3);
+        }
+
+        .navbar-brand i {
+            font-size: 2rem;
+            filter: drop-shadow(0 2px 5px rgba(0,0,0,0.2));
+            animation: float 3s infinite;
+        }
+
+        .navbar-brand .badge {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            font-size: 0.7rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+        }
+
+        .navbar-text {
+            color: rgba(255,255,255,0.95) !important;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .navbar-text i {
+            font-size: 1.25rem;
+        }
+
+        .btn-outline-light {
+            border-width: 2px;
+            font-weight: 600;
+            padding: 0.5rem 1.25rem;
+            border-radius: 30px;
+            transition: all 0.3s ease;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-outline-light:hover {
+            background: white;
+            color: var(--primary) !important;
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* ===== PAGE HEADER ===== */
+        .page-header {
+            margin-bottom: 2rem;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        .page-header h3 {
+            font-weight: 800;
+            color: var(--gray-800);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .page-header h3 i {
+            color: var(--primary);
+            font-size: 2rem;
+            background: rgba(67, 97, 238, 0.1);
+            padding: 0.5rem;
+            border-radius: 12px;
+        }
+
+        .page-header p {
+            color: var(--gray-500);
+            margin-left: 3.5rem;
+        }
+
+        .btn-export {
+            background: var(--success);
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 30px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-export:hover {
+            background: #05b386;
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-2xl);
+            color: white;
+        }
+
+        .btn-export i {
+            font-size: 1.25rem;
+        }
+
+        /* ===== FILTER CARD ===== */
+        .filter-card {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-lg);
+            animation: slideInRight 0.8s ease-out;
+            border: 1px solid rgba(255,255,255,0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        .filter-card h6 {
+            font-weight: 700;
+            color: var(--gray-700);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-card h6 i {
+            color: var(--primary);
+        }
+
+        .filter-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .filter-btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 30px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: 2px solid var(--gray-200);
+            color: var(--gray-700);
+            background: white;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-btn:hover {
+            border-color: var(--primary);
+            background: var(--gray-100);
+            transform: translateY(-2px);
+        }
+
+        .filter-btn.active {
+            background: var(--gradient-primary);
+            border-color: transparent;
+            color: white;
+            box-shadow: var(--shadow-md);
+        }
+
+        .filter-btn .badge {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        .filter-btn.active .badge {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .filter-btn .badge.bg-warning {
+            background: var(--warning) !important;
+            color: white;
+        }
+
+        .filter-btn .badge.bg-info {
+            background: var(--info) !important;
+            color: white;
+        }
+
+        .filter-btn .badge.bg-danger {
+            background: var(--danger) !important;
+            color: white;
+        }
+
+        /* ===== STATS CARDS ===== */
+        .stats-row {
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-lg);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.5);
+            backdrop-filter: blur(10px);
+            animation: fadeIn 0.8s ease-out;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            height: 100%;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+        }
+
+        .stat-card.border-primary::before { background: var(--primary); }
+        .stat-card.border-success::before { background: var(--success); }
+        .stat-card.border-warning::before { background: var(--warning); }
+        .stat-card.border-danger::before { background: var(--danger); }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-2xl);
+        }
+
+        .stat-card i {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-card h6 {
+            color: var(--gray-500);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card h3 {
+            font-weight: 800;
+            font-size: 2.2rem;
+            margin-bottom: 0.25rem;
+            color: var(--gray-900);
+        }
+
+        .stat-card small {
+            color: var(--gray-500);
+            font-size: 0.85rem;
+        }
+
+        /* ===== TABLE CARD ===== */
+        .table-card {
+            background: white;
+            border-radius: var(--border-radius-xl);
+            overflow: hidden;
+            box-shadow: var(--shadow-2xl);
+            animation: fadeIn 0.8s ease-out;
+            margin-bottom: 2rem;
+        }
+
+        .table-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .table-header h5 {
+            font-weight: 700;
+            color: var(--gray-800);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0;
+        }
+
+        .table-header h5 i {
+            color: var(--primary);
+        }
+
+        .search-box {
+            position: relative;
+            width: 300px;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-400);
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border: 2px solid var(--gray-200);
+            border-radius: 30px;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.15);
+        }
+
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table thead th {
+            background: var(--gradient-primary);
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 1.25rem 1rem;
+            border: none;
+            white-space: nowrap;
+        }
+
+        .table thead th i {
+            margin-right: 0.5rem;
+            font-size: 1rem;
+        }
+
+        .table tbody tr {
+            transition: all 0.3s ease;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .table tbody tr:hover {
+            background: var(--gray-100);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .table tbody td {
+            padding: 1rem;
+            vertical-align: middle;
+            color: var(--gray-700);
+            font-size: 0.95rem;
+        }
+
+        /* Status badges */
+        .badge {
+            padding: 0.5rem 1rem;
+            font-weight: 500;
+            font-size: 0.85rem;
+            border-radius: 30px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .badge-expired {
+            background: linear-gradient(135deg, #ef476f, #f9844a);
+            color: white;
+        }
+
+        .badge-expiring {
+            background: linear-gradient(135deg, #ff9e00, #f8961e);
+            color: white;
+        }
+
+        .badge-low {
+            background: linear-gradient(135deg, #00b4d8, #4cc9f0);
+            color: white;
+        }
+
+        .badge-good {
+            background: linear-gradient(135deg, #06d6a0, #00b4d8);
+            color: white;
+        }
+
+        /* Table row colors */
+        .table-danger {
+            background: linear-gradient(135deg, rgba(239, 71, 111, 0.05), rgba(249, 132, 74, 0.05));
+            border-left: 4px solid var(--danger);
+        }
+
+        .table-warning {
+            background: linear-gradient(135deg, rgba(255, 158, 0, 0.05), rgba(248, 150, 30, 0.05));
+            border-left: 4px solid var(--warning);
+        }
+
+        .table-info {
+            background: linear-gradient(135deg, rgba(0, 180, 216, 0.05), rgba(76, 201, 240, 0.05));
+            border-left: 4px solid var(--info);
+        }
+
+        .total-value {
+            font-weight: 700;
+            color: var(--success);
+        }
+
+        /* Legend Card */
+        .legend-card {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: 1.25rem;
+            box-shadow: var(--shadow-md);
+            height: 100%;
+        }
+
+        .legend-card h6 {
+            font-weight: 700;
+            color: var(--gray-700);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .legend-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+
+        .summary-card {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: 1.25rem;
+            box-shadow: var(--shadow-md);
+            height: 100%;
+            text-align: right;
+        }
+
+        .summary-card h6 {
+            font-weight: 700;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-card p {
+            margin-bottom: 0;
+            color: var(--gray-600);
+        }
+
+        .summary-card strong {
+            color: var(--primary);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 1rem;
+            }
+            
+            .page-header p {
+                margin-left: 0;
+            }
+            
+            .btn-export {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .filter-group {
+                flex-direction: column;
+            }
+            
+            .filter-btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .stat-card {
+                margin-bottom: 1rem;
+            }
+            
+            .table-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .search-box {
+                width: 100%;
+            }
+            
+            .table thead th {
+                font-size: 0.8rem;
+                padding: 1rem 0.75rem;
+            }
+            
+            .table tbody td {
+                padding: 0.75rem;
+                font-size: 0.85rem;
+            }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--gray-200);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
+        }
+
+        /* DataTables customization */
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+            background: var(--gradient-primary) !important;
+            color: white !important;
+            border: none;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+            background: var(--gray-200) !important;
+            border: none;
+        }
     </style>
 </head>
 <body>
+    <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark nav-gradient">
         <div class="container-fluid">
             <a class="navbar-brand" href="{{ url_for('admin_dashboard') }}">
-                <i class="bi bi-hospital"></i> All Saint Medical Center
+                <i class="bi bi-hospital"></i> 
+                <span>All Saint Medical Center</span>
+                <span class="badge">Stock Report</span>
             </a>
             <div class="navbar-nav ms-auto">
                 <span class="navbar-text me-3">
-                    <i class="bi bi-person-circle"></i> {{ admin_name }}
+                    <i class="bi bi-person-circle"></i>
+                    <span>{{ admin_name }}</span>
                 </span>
                 <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-light btn-sm">
                     <i class="bi bi-house"></i> Dashboard
@@ -35,27 +699,31 @@
     </nav>
 
     <div class="container-fluid py-4">
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h3><i class="bi bi-boxes"></i> Pharmacy Stock Report</h3>
-                        <p class="text-muted mb-0">Monitor drug inventory, expiry dates, and stock levels</p>
-                    </div>
-                    <div>
-                        <a href="{{ url_for('admin_export_pharmacy_stock', filter=current_filter) }}" 
-                           class="btn btn-success">
-                            <i class="bi bi-file-excel"></i> Export to Excel
-                        </a>
-                    </div>
-                </div>
+        <!-- Page Header -->
+        <div class="page-header d-flex justify-content-between align-items-center">
+            <div>
+                <h3>
+                    <i class="bi bi-boxes"></i>
+                    Pharmacy Stock Report
+                </h3>
+                <p class="text-muted mb-0">
+                    <i class="bi bi-dot"></i> Monitor drug inventory, expiry dates, and stock levels
+                </p>
+            </div>
+            <div>
+                <a href="{{ url_for('admin_export_pharmacy_stock', filter=current_filter) }}" class="btn-export">
+                    <i class="bi bi-file-excel"></i>
+                    <span>Export to Excel</span>
+                </a>
             </div>
         </div>
 
+        <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
                     <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        <i class="bi bi-{% if category == 'success' %}check-circle-fill{% elif category == 'danger' %}exclamation-triangle-fill{% else %}info-circle-fill{% endif %}"></i>
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
@@ -63,250 +731,334 @@
             {% endif %}
         {% endwith %}
 
-        <!-- Filters -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <h6 class="card-title"><i class="bi bi-funnel"></i> Filter Stock</h6>
-                <div class="btn-group" role="group">
-                    <a href="{{ url_for('admin_pharmacy_stock', filter='all') }}" 
-                       class="btn btn-outline-secondary {% if current_filter == 'all' %}active{% endif %}">
-                        All Items ({{ total_items }})
-                    </a>
-                    <a href="{{ url_for('admin_pharmacy_stock', filter='low_stock') }}" 
-                       class="btn btn-outline-warning {% if current_filter == 'low_stock' %}active{% endif %}">
-                        Low Stock 
-                        <span class="badge bg-warning">
-                            {% if current_filter == 'low_stock' %}
-                                {{ filtered_items }}
-                            {% else %}
-                                0
-                            {% endif %}
-                        </span>
-                    </a>
-                    <a href="{{ url_for('admin_pharmacy_stock', filter='expiring_soon') }}" 
-                       class="btn btn-outline-info {% if current_filter == 'expiring_soon' %}active{% endif %}">
-                        Expiring Soon 
-                        <span class="badge bg-info">
-                            {% if current_filter == 'expiring_soon' %}
-                                {{ filtered_items }}
-                            {% else %}
-                                0
-                            {% endif %}
-                        </span>
-                    </a>
-                    <a href="{{ url_for('admin_pharmacy_stock', filter='expired') }}" 
-                       class="btn btn-outline-danger {% if current_filter == 'expired' %}active{% endif %}">
-                        Expired 
-                        <span class="badge bg-danger">
-                            {% if current_filter == 'expired' %}
-                                {{ filtered_items }}
-                            {% else %}
-                                0
-                            {% endif %}
-                        </span>
-                    </a>
-                </div>
+        <!-- Filter Card -->
+        <div class="filter-card">
+            <h6>
+                <i class="bi bi-funnel-fill"></i>
+                Filter Stock
+            </h6>
+            <div class="filter-group">
+                <a href="{{ url_for('admin_pharmacy_stock', filter='all') }}" 
+                   class="filter-btn {% if current_filter == 'all' %}active{% endif %}">
+                    <i class="bi bi-grid"></i>
+                    All Items
+                    <span class="badge bg-primary">{{ total_items }}</span>
+                </a>
+                <a href="{{ url_for('admin_pharmacy_stock', filter='low_stock') }}" 
+                   class="filter-btn {% if current_filter == 'low_stock' %}active{% endif %}">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Low Stock
+                    <span class="badge bg-info">{{ low_stock_count }}</span>
+                </a>
+                <a href="{{ url_for('admin_pharmacy_stock', filter='expiring_soon') }}" 
+                   class="filter-btn {% if current_filter == 'expiring_soon' %}active{% endif %}">
+                    <i class="bi bi-clock-history"></i>
+                    Expiring Soon
+                    <span class="badge bg-warning">{{ expiring_soon_count }}</span>
+                </a>
+                <a href="{{ url_for('admin_pharmacy_stock', filter='expired') }}" 
+                   class="filter-btn {% if current_filter == 'expired' %}active{% endif %}">
+                    <i class="bi bi-x-octagon"></i>
+                    Expired
+                    <span class="badge bg-danger">{{ expired_count }}</span>
+                </a>
             </div>
         </div>
 
-        <!-- Summary Cards -->
-        <div class="row mb-4">
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="card border-primary">
-                    <div class="card-body text-center">
-                        <h6 class="text-muted">Total Items</h6>
-                        <h3>{{ total_items }}</h3>
-                        <small class="text-muted">{{ filtered_items }} filtered</small>
-                    </div>
+        <!-- Summary Stats Cards -->
+        <div class="row stats-row g-4">
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card border-primary" data-aos="fade-up" data-aos-delay="100">
+                    <i class="bi bi-boxes" style="color: var(--primary);"></i>
+                    <h6>Total Items</h6>
+                    <h3>{{ total_items }}</h3>
+                    <small>{{ filtered_items }} items filtered</small>
                 </div>
             </div>
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="card border-success">
-                    <div class="card-body text-center">
-                        <h6 class="text-muted">Stock Value</h6>
-                        <h3 class="total-value">₦{{ "%.2f"|format(total_stock_value) }}</h3>
-                        <small class="text-muted">Total inventory value</small>
-                    </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card border-success" data-aos="fade-up" data-aos-delay="200">
+                    <i class="bi bi-cash-stack" style="color: var(--success);"></i>
+                    <h6>Stock Value</h6>
+                    <h3 class="total-value">₦{{ "%.2f"|format(total_stock_value) }}</h3>
+                    <small>Total inventory value</small>
                 </div>
             </div>
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="card border-warning">
-                    <div class="card-body text-center">
-                        <h6 class="text-muted">Low Stock</h6>
-                        <h3>
-                            {% set low_stock_count = 0 %}
-                            {% for item in stock %}
-                                {% if item.quantity <= item.low_stock_threshold %}
-                                    {% set low_stock_count = low_stock_count + 1 %}
-                                {% endif %}
-                            {% endfor %}
-                            {{ low_stock_count }}
-                        </h3>
-                        <small class="text-muted">Below threshold</small>
-                    </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card border-warning" data-aos="fade-up" data-aos-delay="300">
+                    <i class="bi bi-exclamation-triangle" style="color: var(--warning);"></i>
+                    <h6>Low Stock</h6>
+                    <h3>{{ low_stock_count }}</h3>
+                    <small>Items below threshold</small>
                 </div>
             </div>
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="card border-danger">
-                    <div class="card-body text-center">
-                        <h6 class="text-muted">Expiring Soon</h6>
-                        <h3>
-                            {% set expiring_soon_count = 0 %}
-                            {% for item in stock %}
-                                {% if item.status == 'EXPIRING_SOON' %}
-                                    {% set expiring_soon_count = expiring_soon_count + 1 %}
-                                {% endif %}
-                            {% endfor %}
-                            {{ expiring_soon_count }}
-                        </h3>
-                        <small class="text-muted">Within 30 days</small>
-                    </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card border-danger" data-aos="fade-up" data-aos-delay="400">
+                    <i class="bi bi-clock-history" style="color: var(--danger);"></i>
+                    <h6>Expiring Soon</h6>
+                    <h3>{{ expiring_soon_count }}</h3>
+                    <small>Within 30 days</small>
                 </div>
             </div>
         </div>
 
         <!-- Stock Table -->
-        <div class="card">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover stock-table">
-                        <thead>
-                            <tr>
-                                <th>Drug Name</th>
-                                <th>Strength</th>
-                                <th>Quantity</th>
-                                <th>Unit Price</th>
-                                <th>Total Value</th>
-                                <th>Expiry Date</th>
-                                <th>Days Left</th>
-                                <th>Status</th>
-                                <th>Low Stock Threshold</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in stock %}
-                            <tr class="
-                                {% if item.status == 'EXPIRED' %}
-                                    table-danger
-                                {% elif item.status == 'EXPIRING_SOON' %}
-                                    table-warning
-                                {% elif item.quantity <= item.low_stock_threshold %}
-                                    table-info
-                                {% endif %}
-                            ">
-                                <td><strong>{{ item.name }}</strong></td>
-                                <td>{{ item.strength }}</td>
-                                <td>
-                                    <strong>{{ item.quantity }}</strong>
-                                    {% if item.quantity <= item.low_stock_threshold %}
-                                        <i class="bi bi-exclamation-triangle text-warning"></i>
-                                    {% endif %}
-                                </td>
-                                <td>₦{{ "%.2f"|format(item.unit_price) }}</td>
-                                <td class="total-value">₦{{ "%.2f"|format(item.total_value) }}</td>
-                                <td>{{ item.expiry_date }}</td>
-                                <td>
-                                    {% if item.days_left is not none %}
-                                        {% if item.days_left < 0 %}
-                                            <span class="text-danger">{{ item.days_left }} days</span>
-                                        {% elif item.days_left <= 30 %}
-                                            <span class="text-warning">{{ item.days_left }} days</span>
-                                        {% else %}
-                                            <span class="text-success">{{ item.days_left }} days</span>
-                                        {% endif %}
-                                    {% else %}
-                                        <span class="text-muted">N/A</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if item.status == 'EXPIRED' %}
-                                        <span class="badge badge-expired">Expired</span>
-                                    {% elif item.status == 'EXPIRING_SOON' %}
-                                        <span class="badge badge-expiring">Expiring Soon</span>
-                                    {% elif item.quantity <= item.low_stock_threshold %}
-                                        <span class="badge badge-low">Low Stock</span>
-                                    {% else %}
-                                        <span class="badge badge-good">Good</span>
-                                    {% endif %}
-                                </td>
-                                <td>{{ item.low_stock_threshold }}</td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="9" class="text-center text-muted py-4">
-                                    <i class="bi bi-box display-6 mb-3"></i>
-                                    <h5>No Stock Items Found</h5>
-                                    <p>No items match the current filter</p>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+        <div class="table-card">
+            <div class="table-header">
+                <h5>
+                    <i class="bi bi-table"></i>
+                    Stock Inventory Details
+                </h5>
+                <div class="search-box">
+                    <i class="bi bi-search"></i>
+                    <input type="text" id="searchInput" placeholder="Search drugs..." class="form-control">
                 </div>
-
-                <!-- Summary Footer -->
-                {% if stock %}
-                <div class="row mt-4">
-                    <div class="col-md-6">
-                        <div class="card bg-light">
-                            <div class="card-body">
-                                <h6><i class="bi bi-info-circle"></i> Legend</h6>
-                                <div class="d-flex flex-wrap gap-2">
-                                    <span class="badge badge-expired">Expired</span>
-                                    <span class="badge badge-expiring">Expiring Soon (≤30 days)</span>
-                                    <span class="badge badge-low">Low Stock</span>
-                                    <span class="badge badge-good">Good Stock</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table" id="stockTable">
+                    <thead>
+                        <tr>
+                            <th><i class="bi bi-capsule"></i> Drug Name</th>
+                            <th><i class="bi bi-droplet"></i> Strength</th>
+                            <th><i class="bi bi-box"></i> Quantity</th>
+                            <th><i class="bi bi-cash"></i> Unit Price</th>
+                            <th><i class="bi bi-cash-stack"></i> Total Value</th>
+                            <th><i class="bi bi-calendar"></i> Expiry Date</th>
+                            <th><i class="bi bi-clock"></i> Days Left</th>
+                            <th><i class="bi bi-tag"></i> Status</th>
+                            <th><i class="bi bi-bar-chart"></i> Threshold</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in stock %}
+                        <tr class="
+                            {% if item.status == 'EXPIRED' %}
+                                table-danger
+                            {% elif item.status == 'EXPIRING_SOON' %}
+                                table-warning
+                            {% elif item.quantity <= item.low_stock_threshold %}
+                                table-info
+                            {% endif %}
+                        ">
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-capsule" style="color: var(--primary);"></i>
+                                    <strong>{{ item.name }}</strong>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 text-end">
-                        <div class="card bg-light">
-                            <div class="card-body">
-                                <h6>Current Filter Summary</h6>
-                                <p class="mb-0">
-                                    Showing <strong>{{ filtered_items }}</strong> of <strong>{{ total_items }}</strong> items<br>
-                                    Total Value: <strong class="total-value">₦{{ "%.2f"|format(total_stock_value) }}</strong>
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
+                            </td>
+                            <td>{{ item.strength }}</td>
+                            <td>
+                                <span class="fw-bold">{{ item.quantity }}</span>
+                                {% if item.quantity <= item.low_stock_threshold %}
+                                    <i class="bi bi-exclamation-triangle-fill text-warning ms-1" 
+                                       title="Below threshold"></i>
+                                {% endif %}
+                            </td>
+                            <td>₦{{ "%.2f"|format(item.unit_price) }}</td>
+                            <td class="total-value">₦{{ "%.2f"|format(item.total_value) }}</td>
+                            <td>
+                                <i class="bi bi-calendar-date me-1 text-muted"></i>
+                                {{ item.expiry_date }}
+                            </td>
+                            <td>
+                                {% if item.days_left is not none %}
+                                    {% if item.days_left < 0 %}
+                                        <span class="text-danger fw-bold">
+                                            <i class="bi bi-exclamation-circle"></i> Expired
+                                        </span>
+                                    {% elif item.days_left <= 7 %}
+                                        <span class="text-danger fw-bold">{{ item.days_left }} days</span>
+                                    {% elif item.days_left <= 15 %}
+                                        <span class="text-warning fw-bold">{{ item.days_left }} days</span>
+                                    {% elif item.days_left <= 30 %}
+                                        <span class="text-info fw-bold">{{ item.days_left }} days</span>
+                                    {% else %}
+                                        <span class="text-success">{{ item.days_left }} days</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted"><i class="bi bi-dash"></i></span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.status == 'EXPIRED' %}
+                                    <span class="badge badge-expired">
+                                        <i class="bi bi-x-circle"></i> Expired
+                                    </span>
+                                {% elif item.status == 'EXPIRING_SOON' %}
+                                    <span class="badge badge-expiring">
+                                        <i class="bi bi-clock"></i> Expiring Soon
+                                    </span>
+                                {% elif item.quantity <= item.low_stock_threshold %}
+                                    <span class="badge badge-low">
+                                        <i class="bi bi-exclamation-triangle"></i> Low Stock
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-good">
+                                        <i class="bi bi-check-circle"></i> Good
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ item.low_stock_threshold }}</span>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="9">
+                                <div class="empty-state">
+                                    <i class="bi bi-box"></i>
+                                    <h5>No Stock Items Found</h5>
+                                    <p>No items match the current filter criteria</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
+
+        <!-- Footer Summary -->
+        {% if stock %}
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="legend-card">
+                    <h6>
+                        <i class="bi bi-info-circle"></i>
+                        Status Legend
+                    </h6>
+                    <div class="legend-items">
+                        <span class="badge badge-expired">
+                            <i class="bi bi-x-circle"></i> Expired
+                        </span>
+                        <span class="badge badge-expiring">
+                            <i class="bi bi-clock"></i> Expiring Soon (≤30 days)
+                        </span>
+                        <span class="badge badge-low">
+                            <i class="bi bi-exclamation-triangle"></i> Low Stock
+                        </span>
+                        <span class="badge badge-good">
+                            <i class="bi bi-check-circle"></i> Good Stock
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="summary-card">
+                    <h6>
+                        <i class="bi bi-pie-chart"></i>
+                        Current Filter Summary
+                    </h6>
+                    <p>
+                        Showing <strong>{{ filtered_items }}</strong> of <strong>{{ total_items }}</strong> items<br>
+                        Total Value: <strong class="total-value">₦{{ "%.2f"|format(total_stock_value) }}</strong>
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
     <script>
-        // Auto-refresh every 5 minutes
-        setTimeout(function() {
-            location.reload();
-        }, 300000); // 5 minutes
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50
+        });
 
         // Search functionality
-        const searchInput = document.createElement('input');
-        searchInput.className = 'form-control form-control-sm';
-        searchInput.placeholder = 'Search drugs...';
-        searchInput.style.maxWidth = '200px';
-        
-        // Add search box to the page
-        const searchContainer = document.createElement('div');
-        searchContainer.className = 'd-flex justify-content-end mb-3';
-        searchContainer.appendChild(searchInput);
-        
-        const cardBody = document.querySelector('.card-body:has(.btn-group)');
-        if (cardBody) {
-            cardBody.appendChild(searchContainer);
-        }
+        const searchInput = document.getElementById('searchInput');
         
         searchInput.addEventListener('keyup', function() {
             const searchTerm = this.value.toLowerCase();
-            const rows = document.querySelectorAll('.stock-table tbody tr');
+            const rows = document.querySelectorAll('#stockTable tbody tr');
             
             rows.forEach(row => {
+                if (row.querySelector('td[colspan]')) return;
                 const text = row.textContent.toLowerCase();
                 row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        });
+
+        // Auto-refresh every 5 minutes (with user confirmation)
+        setTimeout(function() {
+            Swal.fire({
+                title: 'Refresh Data?',
+                text: 'The page will refresh to show latest stock data.',
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonColor: '#4361ee',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Yes, refresh',
+                cancelButtonText: 'Later'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    location.reload();
+                }
+            });
+        }, 300000); // 5 minutes
+
+        // Auto-dismiss alerts
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                document.querySelectorAll('.alert').forEach(alert => {
+                    new bootstrap.Alert(alert).close();
+                });
+            }, 5000);
+        });
+
+        // Keyboard shortcut for search
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                searchInput.focus();
+            }
+        });
+
+        // Tooltips for info icons
+        document.querySelectorAll('[title]').forEach(el => {
+            new bootstrap.Tooltip(el);
+        });
+
+        // Export confirmation
+        document.querySelector('.btn-export')?.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            Swal.fire({
+                title: 'Export Stock Report',
+                text: 'This will download the current filtered stock data as an Excel file.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#06d6a0',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Yes, export',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = this.href;
+                    
+                    Swal.fire({
+                        title: 'Export Started',
+                        text: 'Your file will download shortly.',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                }
+            });
+        });
+
+        // Filter button active state
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                if (this.classList.contains('active')) {
+                    e.preventDefault();
+                }
             });
         });
     </script>

@@ -3,34 +3,563 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Today's Collection - Admin Panel</title>
+    <title>Today's Collection - Admin Panel | All Saint Medical Center</title>
+    
+    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- AOS Animation Library -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    
+    <!-- SweetAlert2 -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+    
     <style>
-        .nav-gradient { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .today-card { background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); }
-        .grand-total { font-size: 2.5rem; font-weight: bold; color: #198754; }
-        .method-card { transition: transform 0.3s; }
-        .method-card:hover { transform: translateY(-5px); }
-        .method-card.cash { border-left: 4px solid #198754; }
-        .method-card.card { border-left: 4px solid #0dcaf0; }
-        .method-card.transfer { border-left: 4px solid #6f42c1; }
-        .method-card.pos { border-left: 4px solid #fd7e14; }
-        .method-card.insurance { border-left: 4px solid #20c997; }
-        .method-card.other { border-left: 4px solid #6c757d; }
-        .progress { height: 10px; }
-        .time-period .card { height: 100%; }
+        /* ===== CONSISTENT DESIGN SYSTEM ===== */
+        :root {
+            --primary: #4361ee;
+            --primary-dark: #3a56d4;
+            --primary-light: #6c8cff;
+            --secondary: #7209b7;
+            --success: #06d6a0;
+            --warning: #ff9e00;
+            --danger: #ef476f;
+            --info: #00b4d8;
+            --dark: #0b0f1c;
+            --darker: #070b14;
+            --light: #f8f9ff;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1e293b;
+            --gray-900: #0f172a;
+            
+            --gradient-primary: linear-gradient(135deg, #4361ee 0%, #7209b7 100%);
+            --gradient-success: linear-gradient(135deg, #06d6a0 0%, #00b4d8 100%);
+            --gradient-warning: linear-gradient(135deg, #ff9e00 0%, #ef476f 100%);
+            
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.02);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1);
+            --shadow-2xl: 0 25px 50px -12px rgba(0,0,0,0.25);
+            
+            --border-radius: 12px;
+            --border-radius-lg: 16px;
+            --border-radius-xl: 24px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e6ecf5 100%);
+            color: var(--gray-800);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(67, 97, 238, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(114, 9, 183, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+            animation: gradientShift 15s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(30px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        /* ===== CONSISTENT NAVIGATION ===== */
+        .nav-gradient {
+            background: var(--gradient-primary);
+            padding: 0.75rem 1.5rem;
+            box-shadow: var(--shadow-lg);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            animation: slideInRight 0.5s ease-out;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.35rem;
+            letter-spacing: -0.5px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: white !important;
+            transition: all 0.3s ease;
+        }
+
+        .navbar-brand:hover {
+            transform: translateY(-2px);
+            text-shadow: 0 2px 10px rgba(255,255,255,0.3);
+        }
+
+        .navbar-brand i {
+            font-size: 2rem;
+            filter: drop-shadow(0 2px 5px rgba(0,0,0,0.2));
+            animation: float 3s infinite;
+        }
+
+        .navbar-brand .badge {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            font-size: 0.7rem;
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+        }
+
+        .navbar-text {
+            color: rgba(255,255,255,0.95) !important;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255,255,255,0.1);
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .navbar-text i {
+            font-size: 1.25rem;
+        }
+
+        .btn-outline-light {
+            border-width: 2px;
+            font-weight: 600;
+            padding: 0.5rem 1.25rem;
+            border-radius: 30px;
+            transition: all 0.3s ease;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-outline-light:hover {
+            background: white;
+            color: var(--primary) !important;
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* ===== TODAY'S CARD ===== */
+        .today-card {
+            background: var(--gradient-primary);
+            border-radius: var(--border-radius-xl);
+            overflow: hidden;
+            box-shadow: var(--shadow-2xl);
+            animation: fadeIn 0.8s ease-out;
+            margin-bottom: 2rem;
+            border: 1px solid rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .today-card .card-body {
+            padding: 2rem;
+        }
+
+        .today-card h3 {
+            color: white;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .today-card h3 i {
+            font-size: 2rem;
+        }
+
+        .today-card h5 {
+            color: rgba(255,255,255,0.9);
+            font-weight: 500;
+        }
+
+        .today-card p {
+            color: rgba(255,255,255,0.8);
+        }
+
+        .grand-total {
+            font-size: 3rem;
+            font-weight: 800;
+            color: white;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            animation: pulse 2s infinite;
+        }
+
+        /* ===== STATS CARDS ===== */
+        .stats-row {
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-lg);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255,255,255,0.5);
+            backdrop-filter: blur(10px);
+            animation: fadeIn 0.8s ease-out;
+            text-align: center;
+            height: 100%;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-2xl);
+        }
+
+        .stat-card h6 {
+            color: var(--gray-500);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card h3 {
+            font-weight: 800;
+            font-size: 2rem;
+            margin-bottom: 0.25rem;
+            color: var(--gray-900);
+        }
+
+        .stat-card small {
+            color: var(--gray-500);
+        }
+
+        .progress-target {
+            margin-top: 1rem;
+        }
+
+        .progress {
+            height: 10px;
+            border-radius: 5px;
+            background: var(--gray-200);
+            margin: 0.5rem 0;
+        }
+
+        .progress-bar {
+            border-radius: 5px;
+            background: var(--gradient-success);
+        }
+
+        .progress-bar.warning {
+            background: var(--gradient-warning);
+        }
+
+        /* ===== METHOD CARDS ===== */
+        .method-card {
+            border-radius: var(--border-radius-lg);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            height: 100%;
+            border: 1px solid var(--gray-200);
+        }
+
+        .method-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .method-card .card-body {
+            padding: 1.5rem;
+        }
+
+        .method-card.cash { border-left: 4px solid var(--success); }
+        .method-card.card { border-left: 4px solid var(--primary); }
+        .method-card.transfer { border-left: 4px solid var(--secondary); }
+        .method-card.pos { border-left: 4px solid var(--warning); }
+        .method-card.insurance { border-left: 4px solid var(--info); }
+        .method-card.other { border-left: 4px solid var(--gray-500); }
+
+        .method-card h6 {
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+        }
+
+        .method-card h4 {
+            font-weight: 800;
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .method-card .percentage {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .method-card .progress {
+            height: 6px;
+            margin-top: 0.5rem;
+        }
+
+        /* ===== TIME PERIOD CARDS ===== */
+        .time-period-card {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: 1.25rem;
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s ease;
+            text-align: center;
+            height: 100%;
+        }
+
+        .time-period-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .time-period-card h6 {
+            font-weight: 600;
+            color: var(--gray-600);
+            margin-bottom: 0.5rem;
+        }
+
+        .time-period-card h3 {
+            font-weight: 800;
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .time-period-card.morning h3 { color: var(--primary); }
+        .time-period-card.afternoon h3 { color: var(--warning); }
+        .time-period-card.evening h3 { color: var(--info); }
+
+        /* ===== TABLE STYLES ===== */
+        .table-card {
+            background: white;
+            border-radius: var(--border-radius-xl);
+            overflow: hidden;
+            box-shadow: var(--shadow-2xl);
+            margin-bottom: 2rem;
+        }
+
+        .table-card .card-header {
+            background: white;
+            border-bottom: 2px solid var(--gray-200);
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .table-card .card-header h6 {
+            font-weight: 700;
+            color: var(--gray-800);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin: 0;
+        }
+
+        .table-card .card-header h6 i {
+            color: var(--primary);
+        }
+
+        .btn-view-all {
+            background: var(--gray-100);
+            border: 2px solid var(--gray-200);
+            color: var(--gray-700);
+            padding: 0.5rem 1rem;
+            border-radius: 30px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .btn-view-all:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table thead th {
+            background: var(--gradient-primary);
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 1rem;
+            border: none;
+        }
+
+        .table tbody tr {
+            transition: all 0.3s ease;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .table tbody tr:hover {
+            background: var(--gray-100);
+        }
+
+        .table tbody td {
+            padding: 0.75rem 1rem;
+            vertical-align: middle;
+        }
+
+        /* ===== EXPORT SECTION ===== */
+        .export-section {
+            text-align: center;
+            padding: 2rem;
+            background: white;
+            border-radius: var(--border-radius-xl);
+            box-shadow: var(--shadow-lg);
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        .btn-export {
+            background: var(--success);
+            border: none;
+            color: white;
+            padding: 1rem 2.5rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-export:hover {
+            background: #05b386;
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: var(--shadow-2xl);
+            color: white;
+        }
+
+        .btn-export i {
+            font-size: 1.25rem;
+        }
+
+        .export-info {
+            color: var(--gray-500);
+            margin-top: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .today-card .card-body {
+                padding: 1.5rem;
+            }
+            
+            .grand-total {
+                font-size: 2rem;
+            }
+            
+            .stat-card {
+                margin-bottom: 1rem;
+            }
+            
+            .table-card .card-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .btn-view-all {
+                width: 100%;
+                text-align: center;
+            }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--gray-200);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
+        }
     </style>
 </head>
 <body>
+    <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark nav-gradient">
         <div class="container-fluid">
             <a class="navbar-brand" href="{{ url_for('admin_dashboard') }}">
-                <i class="bi bi-hospital"></i> All Saint Medical Center
+                <i class="bi bi-hospital"></i> 
+                <span>All Saint Medical Center</span>
+                <span class="badge">Today's Collection</span>
             </a>
             <div class="navbar-nav ms-auto">
                 <span class="navbar-text me-3">
-                    <i class="bi bi-person-circle"></i> {{ admin_name }}
+                    <i class="bi bi-person-circle"></i>
+                    <span>{{ admin_name }}</span>
                 </span>
                 <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-light btn-sm">
                     <i class="bi bi-house"></i> Dashboard
@@ -40,33 +569,35 @@
     </nav>
 
     <div class="container-fluid py-4">
-        <!-- Header -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="today-card card">
-                    <div class="card-body">
-                        <div class="row align-items-center">
-                            <div class="col-md-8">
-                                <h3><i class="bi bi-calendar-day"></i> Today's Collection</h3>
-                                <h5 class="text-muted">{{ today_date }}</h5>
-                                <p class="mb-0">
-                                    <i class="bi bi-clock"></i> Last updated: <span id="current-time">{{ current_time }}</span>
-                                </p>
-                            </div>
-                            <div class="col-md-4 text-end">
-                                <h2 class="grand-total">₦{{ "%.2f"|format(grand_total) }}</h2>
-                                <p class="text-muted mb-0">{{ total_transactions }} transactions today</p>
-                            </div>
-                        </div>
+        <!-- Header Card -->
+        <div class="today-card">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h3>
+                            <i class="bi bi-calendar-day"></i>
+                            Today's Collection
+                        </h3>
+                        <h5>{{ today_date }}</h5>
+                        <p class="mb-0">
+                            <i class="bi bi-clock"></i> 
+                            Last updated: <span id="current-time">{{ current_time }}</span>
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div class="grand-total">₦{{ "%.2f"|format(grand_total) }}</div>
+                        <p class="text-white-50 mb-0">{{ total_transactions }} transactions today</p>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- Flash Messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
                     <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        <i class="bi bi-{% if category == 'success' %}check-circle-fill{% elif category == 'danger' %}exclamation-triangle-fill{% else %}info-circle-fill{% endif %}"></i>
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
@@ -75,77 +606,78 @@
         {% endwith %}
 
         <!-- Quick Stats -->
-        <div class="row mb-4">
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="card">
-                    <div class="card-body text-center">
-                        <h6 class="text-muted">Average Transaction</h6>
-                        <h3>₦{{ "%.2f"|format(average_transaction) }}</h3>
-                        <small class="text-muted">Per payment</small>
-                    </div>
+        <div class="row stats-row g-4">
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card" data-aos="fade-up" data-aos-delay="100">
+                    <i class="bi bi-bar-chart" style="color: var(--primary);"></i>
+                    <h6>Average Transaction</h6>
+                    <h3>₦{{ "%.2f"|format(average_transaction) }}</h3>
+                    <small>Per payment</small>
                 </div>
             </div>
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="card">
-                    <div class="card-body text-center">
-                        <h6 class="text-muted">Highest Transaction</h6>
-                        <h3 class="text-success">₦{{ "%.2f"|format(highest_transaction) }}</h3>
-                        <small class="text-muted">Maximum today</small>
-                    </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card" data-aos="fade-up" data-aos-delay="200">
+                    <i class="bi bi-arrow-up-circle" style="color: var(--success);"></i>
+                    <h6>Highest Transaction</h6>
+                    <h3>₦{{ "%.2f"|format(highest_transaction) }}</h3>
+                    <small>Maximum today</small>
                 </div>
             </div>
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="card">
-                    <div class="card-body text-center">
-                        <h6 class="text-muted">Lowest Transaction</h6>
-                        <h3 class="text-primary">₦{{ "%.2f"|format(lowest_transaction) }}</h3>
-                        <small class="text-muted">Minimum today</small>
-                    </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card" data-aos="fade-up" data-aos-delay="300">
+                    <i class="bi bi-arrow-down-circle" style="color: var(--info);"></i>
+                    <h6>Lowest Transaction</h6>
+                    <h3>₦{{ "%.2f"|format(lowest_transaction) }}</h3>
+                    <small>Minimum today</small>
                 </div>
             </div>
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="card">
-                    <div class="card-body text-center">
-                        <h6 class="text-muted">Daily Target</h6>
-                        <h3 class="{% if grand_total >= daily_target %}text-success{% else %}text-warning{% endif %}">
-                            ₦{{ "%.2f"|format(daily_target) }}
-                        </h3>
-                        <div class="progress mt-2">
-                            <div class="progress-bar {% if grand_total >= daily_target %}bg-success{% else %}bg-warning{% endif %}" 
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card" data-aos="fade-up" data-aos-delay="400">
+                    <i class="bi bi-bullseye" style="color: var(--warning);"></i>
+                    <h6>Daily Target</h6>
+                    <h3 class="{% if grand_total >= daily_target %}text-success{% else %}text-warning{% endif %}">
+                        ₦{{ "%.2f"|format(daily_target) }}
+                    </h3>
+                    <div class="progress-target">
+                        <div class="progress">
+                            <div class="progress-bar {% if grand_total < daily_target %}warning{% endif %}" 
                                  role="progressbar" 
                                  style="width: {{ progress_percentage }}%">
                             </div>
                         </div>
-                        <small class="text-muted">{{ "%.1f"|format(progress_percentage) }}% achieved</small>
+                        <small>{{ "%.1f"|format(progress_percentage) }}% achieved</small>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Payment Methods Breakdown -->
-        <div class="row mb-4">
+        <!-- Payment Methods & Time Period -->
+        <div class="row mb-4 g-4">
             <div class="col-md-8">
-                <div class="card">
+                <div class="table-card">
                     <div class="card-header">
-                        <h6 class="mb-0"><i class="bi bi-pie-chart"></i> Payment Method Breakdown</h6>
+                        <h6>
+                            <i class="bi bi-pie-chart-fill"></i>
+                            Payment Method Breakdown
+                        </h6>
                     </div>
                     <div class="card-body">
-                        <div class="row">
+                        <div class="row g-4">
                             {% for method in payment_methods %}
-                            <div class="col-md-6 mb-3">
-                                <div class="card method-card {{ method.name|lower }}">
+                            <div class="col-md-6">
+                                <div class="method-card {{ method.name|lower }}" data-aos="fade-up" data-aos-delay="{{ loop.index * 50 }}">
                                     <div class="card-body">
-                                        <div class="d-flex justify-content-between align-items-center">
+                                        <div class="d-flex justify-content-between align-items-start">
                                             <div>
-                                                <h6 class="mb-1">{{ method.name }}</h6>
-                                                <h4 class="mb-0">₦{{ "%.2f"|format(method.amount) }}</h4>
-                                                <small class="text-muted">{{ method.count }} transactions</small>
+                                                <h6>{{ method.name }}</h6>
+                                                <h4>₦{{ "%.2f"|format(method.amount) }}</h4>
+                                                <small>{{ method.count }} transactions</small>
                                             </div>
-                                            <div class="text-end">
-                                                <div class="display-6">{{ method.percentage }}%</div>
+                                            <div class="percentage {% if method.percentage > 50 %}text-success{% endif %}">
+                                                {{ method.percentage }}%
                                             </div>
                                         </div>
-                                        <div class="progress mt-2">
+                                        <div class="progress">
                                             <div class="progress-bar" 
                                                  role="progressbar" 
                                                  style="width: {{ method.percentage }}%">
@@ -160,43 +692,43 @@
                 </div>
             </div>
             <div class="col-md-4">
-                <div class="card">
+                <div class="table-card">
                     <div class="card-header">
-                        <h6 class="mb-0"><i class="bi bi-clock-history"></i> Collection by Time Period</h6>
+                        <h6>
+                            <i class="bi bi-clock-history"></i>
+                            Collection by Time
+                        </h6>
                     </div>
-                    <div class="card-body time-period">
+                    <div class="card-body">
                         <div class="row g-3">
                             <div class="col-12">
-                                <div class="card bg-light">
-                                    <div class="card-body text-center">
-                                        <h6>Morning (6AM - 12PM)</h6>
-                                        <h3 class="text-primary">₦{{ "%.2f"|format(morning_total) }}</h3>
-                                        <small class="text-muted">
-                                            {{ "%.1f"|format((morning_total/grand_total)*100 if grand_total > 0 else 0) }}% of total
-                                        </small>
-                                    </div>
+                                <div class="time-period-card morning">
+                                    <i class="bi bi-sun" style="color: var(--primary);"></i>
+                                    <h6>Morning (6AM - 12PM)</h6>
+                                    <h3>₦{{ "%.2f"|format(morning_total) }}</h3>
+                                    <small>
+                                        {{ "%.1f"|format((morning_total/grand_total)*100 if grand_total > 0 else 0) }}% of total
+                                    </small>
                                 </div>
                             </div>
                             <div class="col-12">
-                                <div class="card bg-light">
-                                    <div class="card-body text-center">
-                                        <h6>Afternoon (12PM - 4PM)</h6>
-                                        <h3 class="text-warning">₦{{ "%.2f"|format(afternoon_total) }}</h3>
-                                        <small class="text-muted">
-                                            {{ "%.1f"|format((afternoon_total/grand_total)*100 if grand_total > 0 else 0) }}% of total
-                                        </small>
-                                    </div>
+                                <div class="time-period-card afternoon">
+                                    <i class="bi bi-brightness-high" style="color: var(--warning);"></i>
+                                    <h6>Afternoon (12PM - 4PM)</h6>
+                                    <h3>₦{{ "%.2f"|format(afternoon_total) }}</h3>
+                                    <small>
+                                        {{ "%.1f"|format((afternoon_total/grand_total)*100 if grand_total > 0 else 0) }}% of total
+                                    </small>
                                 </div>
                             </div>
                             <div class="col-12">
-                                <div class="card bg-light">
-                                    <div class="card-body text-center">
-                                        <h6>Evening (4PM - 10PM)</h6>
-                                        <h3 class="text-info">₦{{ "%.2f"|format(evening_total) }}</h3>
-                                        <small class="text-muted">
-                                            {{ "%.1f"|format((evening_total/grand_total)*100 if grand_total > 0 else 0) }}% of total
-                                        </small>
-                                    </div>
+                                <div class="time-period-card evening">
+                                    <i class="bi bi-moon" style="color: var(--info);"></i>
+                                    <h6>Evening (4PM - 10PM)</h6>
+                                    <h3>₦{{ "%.2f"|format(evening_total) }}</h3>
+                                    <small>
+                                        {{ "%.1f"|format((evening_total/grand_total)*100 if grand_total > 0 else 0) }}% of total
+                                    </small>
                                 </div>
                             </div>
                         </div>
@@ -207,144 +739,155 @@
 
         <!-- Service Type Breakdown -->
         {% if service_type_data %}
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h6 class="mb-0"><i class="bi bi-briefcase"></i> Collection by Service Type</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Service Type</th>
-                                        <th>Transactions</th>
-                                        <th>Amount</th>
-                                        <th>Percentage</th>
-                                        <th>Progress</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% if service_type_data %}
-                                        {% for service in service_type_data %}
-                                        <tr>
-                                            <td>{{ service.service_type }}</td>
-                                            <td>{{ service.transaction_count }}</td>
-                                            <td>₦{{ "%.2f"|format(service.total_amount) }}</td>
-                                        </tr>
-                                        {% endfor %}
-                                    {% else %}
-                                        <tr>
-                                            <td colspan="3" class="text-center">No transactions today</td>
-                                        </tr>
-                                    {% endif %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+        <div class="table-card mb-4">
+            <div class="card-header">
+                <h6>
+                    <i class="bi bi-briefcase-fill"></i>
+                    Collection by Service Type
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Service Type</th>
+                                <th>Transactions</th>
+                                <th>Amount</th>
+                                <th>Percentage</th>
+                                <th>Progress</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for service in service_type_data %}
+                            <tr>
+                                <td>
+                                    <span class="badge bg-info">{{ service.service_type }}</span>
+                                </td>
+                                <td>{{ service.transaction_count }}</td>
+                                <td>
+                                    <strong>₦{{ "%.2f"|format(service.total_amount) }}</strong>
+                                </td>
+                                <td>{{ "%.1f"|format((service.total_amount/grand_total)*100 if grand_total > 0 else 0) }}%</td>
+                                <td style="width: 200px;">
+                                    <div class="progress">
+                                        <div class="progress-bar" 
+                                             role="progressbar" 
+                                             style="width: {{ (service.total_amount/grand_total)*100 if grand_total > 0 else 0 }}%">
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
         {% endif %}
 
         <!-- Recent Transactions -->
-        <div class="row">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h6 class="mb-0"><i class="bi bi-clock-history"></i> Recent Transactions</h6>
-                        <a href="{{ url_for('admin_billing_payments') }}?start_date={{ date.today().strftime('%Y-%m-%d') }}&end_date={{ date.today().strftime('%Y-%m-%d') }}" 
-                           class="btn btn-sm btn-outline-primary">
-                            View All Today's Payments
-                        </a>
-                    </div>
-                    <div class="card-body">
-                        {% if recent_transactions %}
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Receipt #</th>
-                                        <th>Patient Name</th>
-                                        <th>Service Type</th>
-                                        <th>Amount</th>
-                                        <th>Payment Method</th>
-                                        <th>Status</th>
-                                        <th>Cashier</th>
-                                        <th>Time</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for transaction in recent_transactions %}
-                                    <tr>
-                                        <td><strong>#{{ transaction.id }}</strong></td>
-                                        <td>{{ transaction.patient_name }}</td>
-                                        <td>
-                                            <span class="badge bg-info">{{ transaction.service_type }}</span>
-                                        </td>
-                                        <td><strong>₦{{ "%.2f"|format(transaction.amount_paid) }}</strong></td>
-                                        <td>
-                                            <span class="badge {% if transaction.payment_method == 'Cash' %}bg-success
+        <div class="table-card">
+            <div class="card-header">
+                <h6>
+                    <i class="bi bi-clock-history"></i>
+                    Recent Transactions
+                </h6>
+                <a href="{{ url_for('admin_billing_payments') }}?start_date={{ date.today().strftime('%Y-%m-%d') }}&end_date={{ date.today().strftime('%Y-%m-%d') }}" 
+                   class="btn-view-all">
+                    <i class="bi bi-eye"></i>
+                    View All Today's Payments
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_transactions %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Receipt #</th>
+                                <th>Patient Name</th>
+                                <th>Service Type</th>
+                                <th>Amount</th>
+                                <th>Payment Method</th>
+                                <th>Status</th>
+                                <th>Cashier</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for transaction in recent_transactions %}
+                            <tr>
+                                <td><span class="fw-bold">#{{ transaction.id }}</span></td>
+                                <td>
+                                    <i class="bi bi-person-circle me-1"></i>
+                                    {{ transaction.patient_name }}
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ transaction.service_type }}</span>
+                                </td>
+                                <td><strong class="text-success">₦{{ "%.2f"|format(transaction.amount_paid) }}</strong></td>
+                                <td>
+                                    <span class="badge {% if transaction.payment_method == 'Cash' %}bg-success
                                                         {% elif transaction.payment_method == 'Card' %}bg-primary
                                                         {% elif transaction.payment_method == 'Transfer' %}bg-info
                                                         {% elif transaction.payment_method == 'POS' %}bg-warning
                                                         {% else %}bg-secondary{% endif %}">
-                                                {{ transaction.payment_method }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            {% if transaction.status == 'Paid' %}
-                                                <span class="badge bg-success">Paid</span>
-                                            {% else %}
-                                                <span class="badge bg-warning">{{ transaction.status }}</span>
-                                            {% endif %}
-                                        </td>
-                                        <td>{{ transaction.cashier_name or 'System' }}</td>
-                                        <td>
-                                            {% if transaction.created_at %}
-                                                {{ transaction.created_at.strftime('%H:%M:%S') }}
-                                            {% else %}
-                                                <span class="text-muted">N/A</span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                        {% else %}
-                        <div class="text-center py-5">
-                            <i class="bi bi-clock-history display-6 text-muted mb-3"></i>
-                            <h5>No Transactions Today</h5>
-                            <p class="text-muted">No billing transactions recorded for today yet</p>
-                        </div>
-                        {% endif %}
-                    </div>
+                                        {{ transaction.payment_method }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if transaction.status == 'Paid' %}
+                                        <span class="badge bg-success">Paid</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">{{ transaction.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ transaction.cashier_name or 'System' }}</td>
+                                <td>
+                                    <i class="bi bi-clock me-1"></i>
+                                    {{ transaction.created_at.strftime('%H:%M:%S') }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-clock-history"></i>
+                    <h5>No Transactions Today</h5>
+                    <p class="text-muted">No billing transactions recorded for today yet</p>
+                </div>
+                {% endif %}
             </div>
         </div>
 
-        <!-- Export Button -->
-        <div class="row mt-4">
-            <div class="col-12 text-center">
-                <a href="{{ url_for('admin_export_todays_collection') }}" class="btn btn-success btn-lg">
-                    <i class="bi bi-file-excel"></i> Export Today's Collection Report
-                </a>
-                <p class="text-muted mt-2">
-                    <i class="bi bi-info-circle"></i>
-                    Export includes detailed transaction data and summary statistics
-                </p>
+        <!-- Export Section -->
+        <div class="export-section">
+            <a href="{{ url_for('admin_export_todays_collection') }}" class="btn-export">
+                <i class="bi bi-file-excel"></i>
+                Export Today's Collection Report
+            </a>
+            <div class="export-info">
+                <i class="bi bi-info-circle"></i>
+                Export includes detailed transaction data and summary statistics
             </div>
         </div>
     </div>
 
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
     <script>
-        // Auto-refresh every 2 minutes
-        setTimeout(function() {
-            location.reload();
-        }, 120000); // 2 minutes
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50
+        });
 
         // Update time display
         function updateTime() {
@@ -365,8 +908,81 @@
         // Update time every second
         setInterval(updateTime, 1000);
         
-        // Initialize
-        updateTime();
+        // Auto-refresh with confirmation every 2 minutes
+        setTimeout(function() {
+            Swal.fire({
+                title: 'Refresh Data?',
+                text: 'The page will refresh to show latest collection data.',
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonColor: '#4361ee',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Yes, refresh',
+                cancelButtonText: 'Later'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    location.reload();
+                }
+            });
+        }, 120000); // 2 minutes
+
+        // Auto-dismiss alerts
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                document.querySelectorAll('.alert').forEach(alert => {
+                    new bootstrap.Alert(alert).close();
+                });
+            }, 5000);
+            
+            updateTime();
+        });
+
+        // Export confirmation
+        document.querySelector('.btn-export')?.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            Swal.fire({
+                title: 'Export Today\'s Collection',
+                text: 'This will download the complete collection report for today.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#06d6a0',
+                cancelButtonColor: '#64748b',
+                confirmButtonText: 'Yes, export',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = this.href;
+                    
+                    Swal.fire({
+                        title: 'Export Started',
+                        text: 'Your file will download shortly.',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                }
+            });
+        });
+
+        // Keyboard shortcut for refresh (Ctrl+R)
+        document.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+                e.preventDefault();
+                location.reload();
+            }
+            
+            // Ctrl+E for export
+            if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
+                e.preventDefault();
+                document.querySelector('.btn-export')?.click();
+            }
+        });
+
+        // Tooltips for info icons
+        document.querySelectorAll('[title]').forEach(el => {
+            new bootstrap.Tooltip(el);
+        });
     </script>
 </body>
 </html>
