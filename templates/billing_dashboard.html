@@ -3,80 +3,650 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Billing & Revenue Dashboard</title>
+    <title>Billing & Revenue Dashboard - All Saint Medical Center</title>
 
-    <!-- Font Awesome -->
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
-    <!-- Custom CSS -->
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/billing_dashboard.css') }}">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- AOS Animation Library -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <style>
+        /* ===== CONSISTENT DESIGN SYSTEM ===== */
+        :root {
+            --primary: #4361ee;
+            --primary-dark: #3a56d4;
+            --primary-light: #6c8cff;
+            --secondary: #7209b7;
+            --success: #06d6a0;
+            --warning: #ff9e00;
+            --danger: #ef476f;
+            --info: #00b4d8;
+            --dark: #0b0f1c;
+            --darker: #070b14;
+            --light: #f8f9ff;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-400: #94a3b8;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-800: #1e293b;
+            --gray-900: #0f172a;
+            
+            --gradient-primary: linear-gradient(135deg, #4361ee 0%, #7209b7 100%);
+            --gradient-success: linear-gradient(135deg, #06d6a0 0%, #00b4d8 100%);
+            
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.02);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1);
+            --shadow-2xl: 0 25px 50px -12px rgba(0,0,0,0.25);
+            
+            --border-radius: 12px;
+            --border-radius-lg: 16px;
+            --border-radius-xl: 24px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f1f5f9 0%, #e6ecf5 100%);
+            color: var(--gray-800);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(67, 97, 238, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(114, 9, 183, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+            animation: gradientShift 15s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideInLeft {
+            from { transform: translateX(-30px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        /* ===== TOP BAR ===== */
+        .topbar {
+            background: var(--gradient-primary);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow-lg);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .user-info h2 {
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+            letter-spacing: -0.5px;
+        }
+
+        .user-info p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .user-info p i {
+            font-size: 1rem;
+        }
+
+        .logout-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            backdrop-filter: blur(10px);
+        }
+
+        .logout-btn:hover {
+            background: white;
+            color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        /* ===== PAGE TITLE ===== */
+        .page-title {
+            padding: 2rem 2rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            animation: slideInLeft 0.8s ease-out;
+        }
+
+        .page-title h1 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: var(--gray-900);
+            letter-spacing: -1px;
+        }
+
+        .badge {
+            background: var(--gradient-primary);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            animation: float 3s infinite;
+        }
+
+        .badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: #06d6a0;
+            border-radius: 50%;
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        /* ===== DASHBOARD CARDS ===== */
+        .dashboard-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .card-link {
+            text-decoration: none;
+            display: block;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            border-radius: var(--border-radius-xl);
+            padding: 2rem;
+            box-shadow: var(--shadow-lg);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            position: relative;
+            overflow: hidden;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--gradient-primary);
+            transform: translateY(-100%);
+            transition: transform 0.4s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: var(--shadow-2xl);
+            background: white;
+        }
+
+        .card:hover::before {
+            transform: translateY(0);
+        }
+
+        .card i {
+            font-size: 3rem;
+            background: var(--gradient-primary);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1.5rem;
+            transition: all 0.4s ease;
+        }
+
+        .card:hover i {
+            transform: scale(1.1) rotate(5deg);
+            filter: drop-shadow(0 4px 6px rgba(67, 97, 238, 0.3));
+        }
+
+        .card h3 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 0.75rem;
+            transition: color 0.3s ease;
+        }
+
+        .card:hover h3 {
+            color: var(--primary);
+        }
+
+        .card p {
+            color: var(--gray-600);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 0;
+        }
+
+        /* Card animation delays */
+        .card-link:nth-child(1) { animation-delay: 0.1s; }
+        .card-link:nth-child(2) { animation-delay: 0.2s; }
+        .card-link:nth-child(3) { animation-delay: 0.3s; }
+        .card-link:nth-child(4) { animation-delay: 0.4s; }
+        .card-link:nth-child(5) { animation-delay: 0.5s; }
+        .card-link:nth-child(6) { animation-delay: 0.6s; }
+
+        /* ===== QUICK STATS SECTION (Optional enhancement) ===== */
+        .quick-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            padding: 0 2rem 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .stat-item {
+            background: white;
+            border-radius: var(--border-radius-lg);
+            padding: 1.25rem;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: all 0.3s ease;
+            border: 1px solid var(--gray-200);
+        }
+
+        .stat-item:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary);
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(67, 97, 238, 0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+
+        .stat-content h4 {
+            font-size: 0.9rem;
+            color: var(--gray-600);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-content p {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .topbar {
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+            
+            .user-info h2 {
+                font-size: 1.25rem;
+            }
+            
+            .page-title {
+                padding: 1.5rem 1rem 0.5rem;
+            }
+            
+            .page-title h1 {
+                font-size: 1.6rem;
+            }
+            
+            .dashboard-cards {
+                padding: 1rem;
+                gap: 1rem;
+            }
+            
+            .card {
+                padding: 1.5rem;
+            }
+            
+            .card i {
+                font-size: 2.5rem;
+            }
+            
+            .card h3 {
+                font-size: 1.2rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .badge {
+                display: none;
+            }
+            
+            .quick-stats {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--gray-200);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
+        }
+
+        /* Loading animation for cards */
+        .card.loading {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card.loading::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+    </style>
 </head>
 <body>
 
     <!-- ================= TOP BAR ================= -->
     <header class="topbar">
         <div class="user-info">
-            <h2>Billing & Revenue</h2>
-            <p>Welcome, {{ session.get('billing_username', 'User') }}</p>
+            <h2>
+                <i class="fa-solid fa-hospital"></i>
+                All Saint Medical Center
+            </h2>
+            <p>
+                <i class="fa-regular fa-circle-user"></i>
+                Welcome, {{ session.get('billing_username', 'Billing Officer') }}
+                <span class="badge" style="background: rgba(255,255,255,0.2); margin-left: 0.5rem;">Billing</span>
+            </p>
         </div>
 
         <a href="{{ url_for('billing_logout') }}" class="logout-btn">
-            <i class="fa-solid fa-right-from-bracket"></i> Logout
+            <i class="fa-solid fa-right-from-bracket"></i>
+            Logout
         </a>
     </header>
 
     <!-- ================= PAGE TITLE ================= -->
     <section class="page-title">
         <h1>Billing & Revenue Dashboard</h1>
-        <span class="badge">Active</span>
+        <span class="badge">
+            <i class="fa-regular fa-clock"></i>
+            Active Session
+        </span>
+    </section>
+
+    <!-- ================= QUICK STATS (Optional) ================= -->
+    <section class="quick-stats" data-aos="fade-up">
+        <div class="stat-item">
+            <div class="stat-icon">
+                <i class="fa-solid fa-cash-register"></i>
+            </div>
+            <div class="stat-content">
+                <h4>Today's Collections</h4>
+                <p>₦0.00</p>
+            </div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-icon">
+                <i class="fa-solid fa-clock"></i>
+            </div>
+            <div class="stat-content">
+                <h4>Current Time</h4>
+                <p id="currentTime">--:--:--</p>
+            </div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-icon">
+                <i class="fa-solid fa-calendar"></i>
+            </div>
+            <div class="stat-content">
+                <h4>Today's Date</h4>
+                <p id="currentDate"></p>
+            </div>
+        </div>
     </section>
 
     <!-- ================= DASHBOARD CARDS ================= -->
     <section class="dashboard-cards">
 
-        <!-- THIS IS THE IMPORTANT FIX: The link now points to the correct page -->
-        <a href="{{ url_for('accept_payment_page') }}" class="card-link">
+        <!-- Accept Payment Card -->
+        <a href="{{ url_for('accept_payment_page') }}" class="card-link" data-aos="fade-up" data-aos-delay="100">
             <div class="card">
                 <i class="fa-solid fa-credit-card"></i>
                 <h3>Accept Payment</h3>
-                <p>Receive patient payments for services</p>
+                <p>Process patient payments for medical services, consultations, and procedures</p>
             </div>
         </a>
 
-        <a href="{{ url_for('todays_collection') }}" class="card-link">
+        <!-- Today's Collection Card -->
+        <a href="{{ url_for('todays_collection') }}" class="card-link" data-aos="fade-up" data-aos-delay="200">
             <div class="card">
                 <i class="fa-solid fa-money-bill-trend-up"></i>
                 <h3>Today's Collection</h3>
-                <p>Total amount collected today</p>
+                <p>View real-time summary of all payments collected today</p>
             </div>
         </a>
 
-        <!-- <a href="#" class="card-link">
-            <div class="card">
-                <i class="fa-solid fa-chart-line"></i>
-                <h3>Revenue Report</h3>
-                <p>Daily, weekly & monthly reports</p>
-            </div>
-        </a> -->
-
-        <a href="{{ url_for('payment_history') }}" class="card-link">
+        <!-- Payment History Card -->
+        <a href="{{ url_for('payment_history') }}" class="card-link" data-aos="fade-up" data-aos-delay="300">
             <div class="card">
                 <i class="fa-solid fa-receipt"></i>
                 <h3>Payment History</h3>
-                <p>All completed transactions</p>
+                <p>Access complete transaction history with filtering and search options</p>
             </div>
         </a>
 
-        <!-- <a href="#" class="card-link">
+        <!-- Search Receipt Card (Commented out but ready for future use) -->
+        <!-- 
+        <a href="#" class="card-link" data-aos="fade-up" data-aos-delay="400">
             <div class="card">
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <h3>Search Receipt</h3>
-                <p>Find receipt by number or patient</p>
+                <p>Find receipts by number, patient name, or date range</p>
             </div>
-        </a> -->
+        </a>
+        -->
+
+        <!-- Revenue Report Card (Commented out but ready for future use) -->
+        <!-- 
+        <a href="#" class="card-link" data-aos="fade-up" data-aos-delay="500">
+            <div class="card">
+                <i class="fa-solid fa-chart-line"></i>
+                <h3>Revenue Report</h3>
+                <p>Generate detailed revenue reports with charts and analytics</p>
+            </div>
+        </a>
+        -->
+
     </section>
 
+    <!-- ================= FOOTER (Optional) ================= -->
+    <footer style="text-align: center; padding: 2rem; color: var(--gray-500);">
+        <p>
+            <i class="fa-regular fa-copyright"></i>
+            {{ current_year or '2026' }} All Saint Medical Center. All rights reserved.
+        </p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    
+    <script>
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            once: true,
+            offset: 50
+        });
+
+        // Update time and date
+        function updateDateTime() {
+            const now = new Date();
+            
+            // Format time
+            const timeString = now.toLocaleTimeString('en-US', { 
+                hour12: true, 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            // Format date
+            const dateString = now.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            
+            const timeElement = document.getElementById('currentTime');
+            const dateElement = document.getElementById('currentDate');
+            
+            if (timeElement) timeElement.textContent = timeString;
+            if (dateElement) dateElement.textContent = dateString;
+        }
+        
+        // Update immediately and every second
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+
+        // Add loading state to cards on click
+        document.querySelectorAll('.card-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                const card = this.querySelector('.card');
+                if (card) {
+                    card.classList.add('loading');
+                    
+                    // Remove loading state after navigation (or timeout)
+                    setTimeout(() => {
+                        card.classList.remove('loading');
+                    }, 1000);
+                }
+            });
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl+1 for Accept Payment
+            if ((e.ctrlKey || e.metaKey) && e.key === '1') {
+                e.preventDefault();
+                window.location.href = "{{ url_for('accept_payment_page') }}";
+            }
+            // Ctrl+2 for Today's Collection
+            if ((e.ctrlKey || e.metaKey) && e.key === '2') {
+                e.preventDefault();
+                window.location.href = "{{ url_for('todays_collection') }}";
+            }
+            // Ctrl+3 for Payment History
+            if ((e.ctrlKey || e.metaKey) && e.key === '3') {
+                e.preventDefault();
+                window.location.href = "{{ url_for('payment_history') }}";
+            }
+        });
+
+        // Tooltips for accessibility
+        document.querySelectorAll('.card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transition = 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+            });
+        });
+    </script>
 </body>
 </html>

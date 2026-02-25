@@ -28,7 +28,6 @@
             --warning: #ff9e00;
             --danger: #ef476f;
             --info: #00b4d8;
-            --billing: #f8961e;
             --dark: #0b0f1c;
             --darker: #070b14;
             --light: #f8f9ff;
@@ -42,9 +41,11 @@
             --gray-800: #1e293b;
             --gray-900: #0f172a;
             
+            /* ===== CONSISTENT GRADIENT FOR ALL PAGES ===== */
             --gradient-primary: linear-gradient(135deg, #4361ee 0%, #7209b7 100%);
-            --gradient-billing: linear-gradient(135deg, #f8961e 0%, #f94144 100%);
             --gradient-success: linear-gradient(135deg, #06d6a0 0%, #00b4d8 100%);
+            
+            /* REMOVED: --gradient-billing - using --gradient-primary instead */
             
             --shadow-sm: 0 2px 4px rgba(0,0,0,0.02);
             --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1);
@@ -84,8 +85,7 @@
             bottom: 0;
             background: 
                 radial-gradient(circle at 20% 30%, rgba(67, 97, 238, 0.05) 0%, transparent 50%),
-                radial-gradient(circle at 80% 70%, rgba(248, 150, 30, 0.05) 0%, transparent 50%),
-                radial-gradient(circle at 40% 80%, rgba(114, 9, 183, 0.03) 0%, transparent 50%);
+                radial-gradient(circle at 80% 70%, rgba(114, 9, 183, 0.05) 0%, transparent 50%);
             pointer-events: none;
             z-index: -1;
             animation: gradientShift 15s ease infinite;
@@ -120,7 +120,7 @@
             height: 350px;
             bottom: -150px;
             left: -100px;
-            background: radial-gradient(circle, rgba(248, 150, 30, 0.1) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(114, 9, 183, 0.1) 0%, transparent 70%);
             animation: float 25s infinite alternate-reverse;
         }
 
@@ -130,25 +130,13 @@
         }
 
         @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         @keyframes fadeInLeft {
-            from {
-                opacity: 0;
-                transform: translateX(-30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
+            from { opacity: 0; transform: translateX(-30px); }
+            to { opacity: 1; transform: translateX(0); }
         }
 
         @keyframes pulse {
@@ -173,7 +161,7 @@
 
         .hospital-badge i {
             font-size: 3.5rem;
-            color: var(--billing);
+            color: var(--primary); /* Changed from --billing to --primary */
             background: white;
             padding: 1rem;
             border-radius: 50%;
@@ -198,21 +186,21 @@
             left: 0;
             right: 0;
             height: 6px;
-            background: var(--gradient-billing);
+            background: var(--gradient-primary); /* Changed from --gradient-billing */
         }
 
         /* ===== HEADER ===== */
         .login-header {
             padding: 2rem 2rem 1.5rem;
             text-align: center;
-            background: linear-gradient(135deg, rgba(248, 150, 30, 0.05), rgba(249, 65, 68, 0.05));
+            background: linear-gradient(135deg, rgba(67, 97, 238, 0.05), rgba(114, 9, 183, 0.05)); /* Changed from orange */
         }
 
         .icon-wrapper {
             width: 80px;
             height: 80px;
             margin: 0 auto 1.5rem;
-            background: var(--gradient-billing);
+            background: var(--gradient-primary); /* Changed from --gradient-billing */
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -243,7 +231,7 @@
         .login-title {
             font-size: 1.35rem;
             font-weight: 700;
-            color: var(--billing);
+            color: var(--primary); /* Changed from --billing */
             margin-bottom: 0.25rem;
         }
 
@@ -298,7 +286,7 @@
         }
 
         .form-label i {
-            color: var(--billing);
+            color: var(--primary); /* Changed from --billing */
         }
 
         .input-group {
@@ -310,15 +298,15 @@
         }
 
         .input-group:focus-within {
-            border-color: var(--billing);
-            box-shadow: 0 0 0 4px rgba(248, 150, 30, 0.15);
+            border-color: var(--primary); /* Changed from --billing */
+            box-shadow: 0 0 0 4px rgba(67, 97, 238, 0.15); /* Changed from orange */
             transform: translateY(-2px);
         }
 
         .input-group-text {
             background: var(--gray-100);
             border: none;
-            color: var(--billing);
+            color: var(--primary); /* Changed from --billing */
             padding: 0.75rem 1rem;
         }
 
@@ -348,7 +336,7 @@
         }
 
         .toggle-password:hover {
-            color: var(--billing);
+            color: var(--primary); /* Changed from --billing */
         }
 
         /* ===== OPTIONS ===== */
@@ -375,8 +363,8 @@
         }
 
         .form-check-input:checked {
-            background-color: var(--billing);
-            border-color: var(--billing);
+            background-color: var(--primary); /* Changed from --billing */
+            border-color: var(--primary); /* Changed from --billing */
         }
 
         .form-check-label {
@@ -386,7 +374,7 @@
         }
 
         .forgot-password {
-            color: var(--billing);
+            color: var(--primary); /* Changed from --billing */
             text-decoration: none;
             font-size: 0.95rem;
             font-weight: 500;
@@ -394,13 +382,13 @@
         }
 
         .forgot-password:hover {
-            color: var(--danger);
+            color: var(--secondary); /* Changed from --danger to match admin theme */
             text-decoration: underline;
         }
 
         /* ===== BUTTON ===== */
         .btn-login {
-            background: var(--gradient-billing);
+            background: var(--gradient-primary); /* Changed from --gradient-billing */
             border: none;
             color: white;
             padding: 1rem;
@@ -477,7 +465,7 @@
         }
 
         .back-link {
-            color: var(--billing);
+            color: var(--primary); /* Changed from --billing */
             text-decoration: none;
             display: inline-flex;
             align-items: center;
@@ -487,7 +475,7 @@
         }
 
         .back-link:hover {
-            color: var(--danger);
+            color: var(--secondary); /* Changed from --danger */
             transform: translateX(-5px);
         }
 
@@ -531,7 +519,7 @@
         }
 
         .modal-header {
-            background: var(--gradient-billing);
+            background: var(--gradient-primary); /* Changed from --gradient-billing */
             color: white;
             border: none;
             padding: 1.5rem;
@@ -554,7 +542,7 @@
         }
 
         .modal-body i {
-            color: var(--billing);
+            color: var(--primary); /* Changed from --billing */
             font-size: 1.25rem;
         }
 
@@ -610,12 +598,12 @@
         }
 
         ::-webkit-scrollbar-thumb {
-            background: var(--billing);
+            background: var(--primary); /* Changed from --billing */
             border-radius: 5px;
         }
 
         ::-webkit-scrollbar-thumb:hover {
-            background: var(--danger);
+            background: var(--primary-dark); /* Changed from --danger */
         }
     </style>
 </head>
@@ -627,18 +615,18 @@
     <div class="login-wrapper">
         <!-- Hospital Badge -->
         <div class="hospital-badge" data-aos="zoom-in">
-            <i class="bi bi-receipt"></i>
+            <i class="bi bi-receipt"></i> <!-- Different icon, same color -->
         </div>
 
         <!-- Login Card -->
         <div class="login-card position-relative">
             <div class="login-header">
                 <div class="icon-wrapper">
-                    <i class="bi bi-cash-coin"></i>
+                    <i class="bi bi-cash-coin"></i> <!-- Different icon, same gradient background -->
                 </div>
                 <h4 class="hospital-name">All Saint Medical Center</h4>
                 <p class="hospital-location">Nsukka, Enugu State</p>
-                <h5 class="login-title">Billing & Revenue Unit</h5>
+                <h5 class="login-title">Billing & Revenue Unit</h5> <!-- Same primary color -->
                 <p class="login-subtitle">Please sign in to access the billing system</p>
             </div>
 
@@ -721,10 +709,10 @@
                 </button>
 
                 <!-- Security Notice -->
-                <div class="security-notice">
+                <!-- <div class="security-notice"> -->
                     <i class="bi bi-shield-check"></i>
-                    <span>Secure login with 256-bit encryption</span>
-                </div>
+                    <!-- <span>Secure login with 256-bit encryption</span> -->
+                <!-- </div> -->
             </form>
 
             <!-- Footer -->
@@ -834,20 +822,6 @@
             input.addEventListener('blur', function() {
                 this.closest('.input-group')?.classList.remove('focused');
             });
-        });
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
-            // Ctrl+Shift+B to focus billing
-            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'B') {
-                e.preventDefault();
-                document.getElementById('username')?.focus();
-            }
-        });
-
-        // Tooltips for info icons
-        document.querySelectorAll('[title]').forEach(el => {
-            new bootstrap.Tooltip(el);
         });
 
         // Prevent form resubmission on page refresh
