@@ -33,15 +33,72 @@ def get_db_connection():
 def create_tables():
     """Create all necessary tables if they don't exist."""
     queries = {
+        "admin_users": """
+            CREATE TABLE IF NOT EXISTS admin_users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                full_name VARCHAR(100),
+                email VARCHAR(100),
+                role VARCHAR(50) DEFAULT 'Admin',
+                is_super_admin BOOLEAN DEFAULT FALSE,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER REFERENCES admin_users(id),
+                last_login TIMESTAMP
+            );
+        """,
+        
+        "cashier_users": """
+            CREATE TABLE IF NOT EXISTS cashier_users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                full_name VARCHAR(100),
+                email VARCHAR(100),
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER REFERENCES admin_users(id),
+                last_login TIMESTAMP
+            );
+        """,
+        
+        "admin_audit_logs": """
+            CREATE TABLE IF NOT EXISTS admin_audit_logs (
+                id SERIAL PRIMARY KEY,
+                admin_id INTEGER REFERENCES admin_users(id),
+                action VARCHAR(100) NOT NULL,
+                details TEXT,
+                ip_address VARCHAR(45),
+                user_agent TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """,
+        
         "pharmacists": """
             CREATE TABLE IF NOT EXISTS pharmacists (
                 id SERIAL PRIMARY KEY,
                 username VARCHAR(50) UNIQUE NOT NULL,
                 password VARCHAR(255) NOT NULL,
+                full_name VARCHAR(100),
                 is_active BOOLEAN DEFAULT TRUE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER REFERENCES admin_users(id)
             );
         """,
+        
+        "billing_users": """
+            CREATE TABLE IF NOT EXISTS billing_users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                full_name VARCHAR(100),
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER REFERENCES admin_users(id)
+            );
+        """,
+        
         "drugs": """
             CREATE TABLE IF NOT EXISTS drugs (
                 id SERIAL PRIMARY KEY,
@@ -55,6 +112,7 @@ def create_tables():
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """,
+        
         "drug_sales": """
             CREATE TABLE IF NOT EXISTS drug_sales (
                 id SERIAL PRIMARY KEY,
@@ -70,6 +128,7 @@ def create_tables():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """,
+        
         "receipts": """
             CREATE TABLE IF NOT EXISTS receipts (
                 id SERIAL PRIMARY KEY,
@@ -80,23 +139,26 @@ def create_tables():
                 tax DECIMAL(10, 2) DEFAULT 0.00,
                 total_amount DECIMAL(10, 2) NOT NULL,
                 grand_total DECIMAL(10, 2) NOT NULL,
+                pharmacist VARCHAR(50),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """,
+        
         "receipt_items": """
             CREATE TABLE IF NOT EXISTS receipt_items (
                 id SERIAL PRIMARY KEY,
-                receipt_id INT NOT NULL REFERENCES receipts(id),
+                receipt_id INT NOT NULL REFERENCES receipts(id) ON DELETE CASCADE,
                 drug_name VARCHAR(100) NOT NULL,
                 strength VARCHAR(50) NOT NULL,
                 quantity INT NOT NULL,
                 unit_price DECIMAL(10, 2) NOT NULL
             );
         """,
+        
         "stock_movements": """
             CREATE TABLE IF NOT EXISTS stock_movements (
                 id SERIAL PRIMARY KEY,
-                drug_id INT NOT NULL REFERENCES drugs(id),
+                drug_id INT NOT NULL REFERENCES drugs(id) ON DELETE CASCADE,
                 movement_type VARCHAR(20) NOT NULL,
                 quantity INT NOT NULL,
                 user_id INT NOT NULL,
@@ -104,14 +166,7 @@ def create_tables():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """,
-        "billing_users": """
-            CREATE TABLE IF NOT EXISTS billing_users (
-                id SERIAL PRIMARY KEY,
-                username VARCHAR(50) UNIQUE NOT NULL,
-                password VARCHAR(255) NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """,
+        
         "billing_invoice": """
             CREATE TABLE IF NOT EXISTS billing_invoice (
                 id SERIAL PRIMARY KEY,
@@ -122,16 +177,18 @@ def create_tables():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """,
+        
         "billing_receipt": """
             CREATE TABLE IF NOT EXISTS billing_receipt (
                 id SERIAL PRIMARY KEY,
-                invoice_id INT NOT NULL REFERENCES billing_invoice(id),
+                invoice_id INT NOT NULL REFERENCES billing_invoice(id) ON DELETE CASCADE,
                 amount_paid DECIMAL(10, 2) NOT NULL,
                 payment_method VARCHAR(50) NOT NULL,
                 received_by VARCHAR(50) NOT NULL,
                 payment_date TIMESTAMP NOT NULL
             );
         """,
+        
         "payments": """
             CREATE TABLE IF NOT EXISTS payments (
                 id SERIAL PRIMARY KEY,
@@ -150,6 +207,7 @@ def create_tables():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """,
+        
         "users": """
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -157,24 +215,220 @@ def create_tables():
                 password VARCHAR(255) NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
-        """
+        """,
         
+        # HR Tables
+        "hr_users": """
+            CREATE TABLE IF NOT EXISTS hr_users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                full_name VARCHAR(100) NOT NULL,
+                email VARCHAR(100),
+                role VARCHAR(50) DEFAULT 'HR Staff',
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """,
+        
+        "departments": """
+            CREATE TABLE IF NOT EXISTS departments (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                code VARCHAR(20) UNIQUE NOT NULL,
+                description TEXT,
+                head_of_dept VARCHAR(100),
+                status VARCHAR(20) DEFAULT 'Active',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """,
+        
+        "staff": """
+            CREATE TABLE IF NOT EXISTS staff (
+                id SERIAL PRIMARY KEY,
+                staff_id VARCHAR(50) UNIQUE NOT NULL,
+                first_name VARCHAR(100) NOT NULL,
+                last_name VARCHAR(100) NOT NULL,
+                department_id INTEGER REFERENCES departments(id),
+                position VARCHAR(100) NOT NULL,
+                employment_type VARCHAR(50),
+                email VARCHAR(100),
+                phone VARCHAR(20),
+                hire_date DATE NOT NULL,
+                salary DECIMAL(12, 2),
+                status VARCHAR(20) DEFAULT 'Active',
+                emergency_contact VARCHAR(100),
+                address TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """,
+        
+        "attendance": """
+            CREATE TABLE IF NOT EXISTS attendance (
+                id SERIAL PRIMARY KEY,
+                staff_id INTEGER REFERENCES staff(id) ON DELETE CASCADE,
+                date DATE NOT NULL,
+                check_in TIME,
+                check_out TIME,
+                status VARCHAR(20),
+                remarks TEXT,
+                recorded_by INTEGER REFERENCES hr_users(id),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(staff_id, date)
+            );
+        """,
+        
+        "leaves": """
+            CREATE TABLE IF NOT EXISTS leaves (
+                id SERIAL PRIMARY KEY,
+                staff_id INTEGER REFERENCES staff(id) ON DELETE CASCADE,
+                leave_type VARCHAR(50) NOT NULL,
+                start_date DATE NOT NULL,
+                end_date DATE NOT NULL,
+                days_requested INTEGER NOT NULL,
+                reason TEXT,
+                status VARCHAR(20) DEFAULT 'Pending',
+                approved_by INTEGER REFERENCES hr_users(id),
+                approved_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """,
+        
+        "schedules": """
+            CREATE TABLE IF NOT EXISTS schedules (
+                id SERIAL PRIMARY KEY,
+                staff_id INTEGER REFERENCES staff(id) ON DELETE CASCADE,
+                schedule_date DATE NOT NULL,
+                shift_type VARCHAR(50),
+                start_time TIME NOT NULL,
+                end_time TIME NOT NULL,
+                location VARCHAR(100),
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """,
+        
+        "payroll": """
+            CREATE TABLE IF NOT EXISTS payroll (
+                id SERIAL PRIMARY KEY,
+                staff_id INTEGER REFERENCES staff(id) ON DELETE CASCADE,
+                pay_period VARCHAR(50),
+                basic_salary DECIMAL(12, 2),
+                allowances DECIMAL(12, 2),
+                deductions DECIMAL(12, 2),
+                net_salary DECIMAL(12, 2),
+                status VARCHAR(20) DEFAULT 'Pending',
+                payment_date DATE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """,
+        
+        "documents": """
+            CREATE TABLE IF NOT EXISTS documents (
+                id SERIAL PRIMARY KEY,
+                staff_id INTEGER REFERENCES staff(id) ON DELETE CASCADE,
+                document_type VARCHAR(50),
+                document_name VARCHAR(255),
+                file_path VARCHAR(500),
+                uploaded_by INTEGER REFERENCES hr_users(id),
+                uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """,
+        
+        "shift_swap_requests": """
+            CREATE TABLE IF NOT EXISTS shift_swap_requests (
+                id SERIAL PRIMARY KEY,
+                schedule_id INTEGER NOT NULL REFERENCES schedules(id) ON DELETE CASCADE,
+                from_staff_id INTEGER NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+                to_staff_id INTEGER NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+                reason TEXT,
+                status VARCHAR(20) DEFAULT 'Pending',
+                requested_by INTEGER REFERENCES hr_users(id),
+                requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                approved_by INTEGER REFERENCES hr_users(id),
+                approved_at TIMESTAMP,
+                reviewed_by INTEGER REFERENCES hr_users(id),
+                reviewed_at TIMESTAMP,
+                rejection_reason TEXT
+            );
+        """
     }
 
     conn = get_db_connection()
     if not conn:
+        app.logger.error("Cannot connect to database for table creation")
         return
 
     cursor = conn.cursor()
+    
+    # Enable UUID extension if needed
+    try:
+        cursor.execute("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";")
+    except Exception as e:
+        app.logger.warning(f"Could not enable uuid-ossp extension: {e}")
+    
+    # Create all tables
     for table, query in queries.items():
         try:
             cursor.execute(query)
+            app.logger.info(f"Table '{table}' created or already exists")
         except Exception as e:
             app.logger.error(f"Error creating table {table}: {e}")
+    
+    # Create indexes for better performance
+    indexes = [
+        # Drug indexes
+        "CREATE INDEX IF NOT EXISTS idx_drugs_name ON drugs(name);",
+        "CREATE INDEX IF NOT EXISTS idx_drugs_expiry_date ON drugs(expiry_date);",
+        "CREATE INDEX IF NOT EXISTS idx_drugs_stock_quantity ON drugs(stock_quantity);",
+        
+        # Sales indexes
+        "CREATE INDEX IF NOT EXISTS idx_drug_sales_created_at ON drug_sales(created_at);",
+        "CREATE INDEX IF NOT EXISTS idx_drug_sales_receipt_no ON drug_sales(receipt_no);",
+        
+        # Receipt indexes
+        "CREATE INDEX IF NOT EXISTS idx_receipts_created_at ON receipts(created_at);",
+        "CREATE INDEX IF NOT EXISTS idx_receipt_items_receipt_id ON receipt_items(receipt_id);",
+        
+        # Payment indexes
+        "CREATE INDEX IF NOT EXISTS idx_payments_payment_date ON payments(payment_date);",
+        "CREATE INDEX IF NOT EXISTS idx_payments_patient_name ON payments(patient_name);",
+        "CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);",
+        
+        # HR indexes
+        "CREATE INDEX IF NOT EXISTS idx_staff_department ON staff(department_id);",
+        "CREATE INDEX IF NOT EXISTS idx_staff_status ON staff(status);",
+        "CREATE INDEX IF NOT EXISTS idx_attendance_staff_date ON attendance(staff_id, date);",
+        "CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(date);",
+        "CREATE INDEX IF NOT EXISTS idx_leaves_staff_status ON leaves(staff_id, status);",
+        "CREATE INDEX IF NOT EXISTS idx_leaves_status ON leaves(status);",
+        "CREATE INDEX IF NOT EXISTS idx_schedules_staff_date ON schedules(staff_id, schedule_date);",
+        "CREATE INDEX IF NOT EXISTS idx_payroll_staff_period ON payroll(staff_id, pay_period);",
+        "CREATE INDEX IF NOT EXISTS idx_shift_swap_requests_status ON shift_swap_requests(status);",
+        
+        # User indexes
+        "CREATE INDEX IF NOT EXISTS idx_admin_users_username ON admin_users(username);",
+        "CREATE INDEX IF NOT EXISTS idx_pharmacists_username ON pharmacists(username);",
+        "CREATE INDEX IF NOT EXISTS idx_billing_users_username ON billing_users(username);",
+        "CREATE INDEX IF NOT EXISTS idx_cashier_users_username ON cashier_users(username);",
+        
+        # Audit indexes
+        "CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_admin_id ON admin_audit_logs(admin_id);",
+        "CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_created_at ON admin_audit_logs(created_at);"
+    ]
+    
+    for index_query in indexes:
+        try:
+            cursor.execute(index_query)
+        except Exception as e:
+            app.logger.warning(f"Could not create index: {e}")
+    
     conn.commit()
     cursor.close()
     conn.close()
-
+    
+    app.logger.info("All tables created successfully")
 # Make Python built-in functions and modules available in templates
 @app.context_processor
 def utility_processor():
@@ -3705,12 +3959,21 @@ def admin_create_cashier():
                 VALUES (%s, %s, %s, %s, %s)
             """, (username, hashed_pw, full_name, email, session['admin_id']))
             
-            # Also create in billing_users table for compatibility
-            cursor.execute("""
-                INSERT INTO billing_users (username, password, full_name, created_by)
-                VALUES (%s, %s, %s, %s)
-                ON CONFLICT (username) DO NOTHING
-            """, (username, hashed_pw, full_name, session['admin_id']))
+            # Also create in billing_users table for compatibility - handle missing created_by column
+            try:
+                cursor.execute("""
+                    INSERT INTO billing_users (username, password, full_name, created_by)
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT (username) DO NOTHING
+                """, (username, hashed_pw, full_name, session['admin_id']))
+            except Exception as e:
+                # If created_by column doesn't exist, insert without it
+                app.logger.warning(f"Could not insert into billing_users with created_by: {e}")
+                cursor.execute("""
+                    INSERT INTO billing_users (username, password, full_name)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (username) DO NOTHING
+                """, (username, hashed_pw, full_name))
             
             conn.commit()
             
@@ -5023,15 +5286,97 @@ def admin_delete_expired_drugs():
         conn.close()
     
     return redirect(url_for('admin_pharmacy_stock'))
-# Update your main function to include this:
+
+def add_missing_columns():
+    """Add missing columns to existing tables."""
+    conn = get_db_connection()
+    if not conn:
+        return
+    
+    cursor = conn.cursor()
+    
+    try:
+        # Add created_by to billing_users if it doesn't exist
+        cursor.execute("""
+            DO $$ 
+            BEGIN
+                BEGIN
+                    ALTER TABLE billing_users ADD COLUMN created_by INTEGER;
+                EXCEPTION
+                    WHEN duplicate_column THEN 
+                        NULL;
+                END;
+                
+                BEGIN
+                    ALTER TABLE pharmacists ADD COLUMN created_by INTEGER;
+                EXCEPTION
+                    WHEN duplicate_column THEN 
+                        NULL;
+                END;
+                
+                BEGIN
+                    ALTER TABLE pharmacists ADD COLUMN full_name VARCHAR(100);
+                EXCEPTION
+                    WHEN duplicate_column THEN 
+                        NULL;
+                END;
+                
+                BEGIN
+                    ALTER TABLE billing_users ADD COLUMN full_name VARCHAR(100);
+                EXCEPTION
+                    WHEN duplicate_column THEN 
+                        NULL;
+                END;
+            END $$;
+        """)
+        
+        # Update existing records with default values
+        cursor.execute("""
+            UPDATE billing_users 
+            SET created_by = 1 
+            WHERE created_by IS NULL 
+            AND EXISTS (SELECT 1 FROM admin_users WHERE id = 1)
+        """)
+        
+        cursor.execute("""
+            UPDATE pharmacists 
+            SET created_by = 1 
+            WHERE created_by IS NULL 
+            AND EXISTS (SELECT 1 FROM admin_users WHERE id = 1)
+        """)
+        
+        cursor.execute("UPDATE pharmacists SET full_name = username WHERE full_name IS NULL;")
+        cursor.execute("UPDATE billing_users SET full_name = username WHERE full_name IS NULL;")
+        
+        conn.commit()
+        app.logger.info("Added missing columns to tables")
+        
+    except Exception as e:
+        conn.rollback()
+        app.logger.error(f"Error adding missing columns: {e}")
+    
+    finally:
+        cursor.close()
+        conn.close()
+        
+        
+# # Update your main function to include this:
+# if __name__ == "__main__":
+#     create_tables()
+#     create_default_users()
+#     create_hr_tables()
+#     create_default_admin()
+#     add_missing_columns()  # Add this before sync_existing_users
+#     sync_existing_users()
+#     app.run(debug=True)
+
+
+
 if __name__ == "__main__":
     create_tables()
     create_default_users()
     create_hr_tables()
     create_default_admin()
-    add_missing_columns()  # Add this before sync_existing_users
+    add_missing_columns()  # Call this BEFORE sync_existing_users
     sync_existing_users()
     app.run(debug=True)
-
-
-
