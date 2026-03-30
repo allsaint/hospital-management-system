@@ -769,7 +769,7 @@
             </div>
             
             <div class="action-buttons">
-                <a href="{{ url_for('export_todays_collection') }}" class="export-btn">
+                <a href="{{ url_for('admin_export_todays_collection') }}" class="export-btn">
                     <i class="fa-solid fa-file-excel"></i> Export Report
                 </a>
                 <a href="{{ url_for('todays_collection') }}" class="refresh-btn">
@@ -951,7 +951,7 @@
                                 <tr data-aos="fade-up" data-aos-delay="{{ loop.index * 50 }}">
                                     <td>
                                         <i class="fa-regular fa-clock" style="color: var(--primary); margin-right: 0.25rem;"></i>
-                                        {{ transaction.created_at.strftime('%H:%M') }}
+                                        {{ transaction.created_at.strftime('%H:%M') if transaction.created_at else 'N/A' }}
                                     </td>
                                     <td><span style="font-weight: 600;">#{{ transaction.id }}</span></td>
                                     <td>
@@ -997,7 +997,7 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <a href="{{ url_for('billing_receipt', payment_id=transaction.id) }}" class="action-btn">
+                                        <a href="{{ url_for('view_payment_receipt', payment_id=transaction.id) }}" class="action-btn">
                                             <i class="fa-solid fa-eye"></i> View
                                         </a>
                                     </td>

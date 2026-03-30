@@ -47,3 +47,4 @@ logs/
 # Virtual environment
 myenv/
 .env/
+migrate_to_sqlite.py

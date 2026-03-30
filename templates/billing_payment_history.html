@@ -781,7 +781,7 @@
                                 </td>
                                 <td>
                                     <i class="fa-regular fa-calendar" style="color: var(--gray-500); margin-right: 0.5rem;"></i>
-                                    {{ payment.payment_date.strftime('%Y-%m-%d') }}
+                                    {{ payment.payment_date.strftime('%Y-%m-%d') if payment.payment_date else 'N/A' }}
                                 </td>
                                 <td>
                                     <span class="payment-method">
@@ -816,11 +816,11 @@
                                 </td>
                                 <td>
                                     <div style="display: flex; gap: 0.5rem;">
-                                        <a href="{{ url_for('billing_receipt', payment_id=payment.id) }}" 
+                                        <a href="{{ url_for('view_payment_receipt', payment_id=payment.id) }}" 
                                            class="action-btn view-btn" title="View Receipt">
                                             <i class="fa-solid fa-eye"></i> View
                                         </a>
-                                        <a href="{{ url_for('billing_receipt', payment_id=payment.id) }}" 
+                                        <a href="{{ url_for('view_payment_receipt', payment_id=payment.id) }}" 
                                            target="_blank" class="action-btn print-btn" title="Print Receipt">
                                             <i class="fa-solid fa-print"></i> Print
                                         </a>

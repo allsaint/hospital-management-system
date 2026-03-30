@@ -740,7 +740,7 @@
                             <td>
                                 <div class="d-flex align-items-center gap-1">
                                     <i class="bi bi-calendar text-muted"></i>
-                                    {{ cashier[5].strftime('%Y-%m-%d') }}
+                                    {{ cashier[5]|format_date('%Y-%m-%d %H:%M') }}
                                 </div>
                             </td>
                             <td>

@@ -717,7 +717,7 @@
                             <td>
                                 <div class="d-flex align-items-center gap-1">
                                     <i class="bi bi-calendar text-muted"></i>
-                                    {{ pharmacist[4].strftime('%Y-%m-%d') }}
+                                    {{ pharmacist[4].strftime('%Y-%m-%d') if pharmacist[4] else 'N/A' }}
                                 </div>
                             </td>
                             <td>

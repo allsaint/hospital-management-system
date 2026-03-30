@@ -815,7 +815,7 @@
                             </td>
                             <td>
                                 <i class="bi bi-calendar text-muted"></i>
-                                {{ admin[7].strftime('%Y-%m-%d') }}
+                                {{ admin[7].strftime('%Y-%m-%d') if admin[7] else 'N/A' }}
                             </td>
                             <td>
                                 <div class="d-flex gap-1">
