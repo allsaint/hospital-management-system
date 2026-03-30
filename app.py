@@ -11,23 +11,82 @@ import io
 import bcrypt
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
+import logging
+import sys
 
 
 # -------------------- FLASK APP SETUP --------------------
+# Create Flask app FIRST
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "super_secret_key_change_later")
 
+# Configure logging for production
+# Configure logging AFTER creating app
+if not app.debug:
+    # In production, log to stdout (Render captures this)
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setLevel(logging.INFO)
+    app.logger.addHandler(stream_handler)
+    
+app.logger.setLevel(logging.INFO)
+
+
 # -------------------- DATABASE CONFIGURATION --------------------
-DATABASE_URL = os.environ.get("DATABASE_URL", 'postgresql://flask_user:Olarewaju1.@localhost:5432/hospital2_db')
+# Get database URL from environment variable (Render will set this)
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+if not DATABASE_URL:
+    # Fallback for local development
+    DATABASE_URL = 'postgresql://flask_user:Olarewaju1.@localhost:5432/hospital2_db'
+    app.logger.info("Using local database URL")
+else:
+    app.logger.info("Using production database URL from environment")
+
+# For Render's PostgreSQL, ensure URL format is correct
+# Render provides DATABASE_URL in format: postgresql://username:password@host:port/database
+if 'postgres://' in DATABASE_URL and 'postgresql' not in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+    app.logger.info("Converted postgres:// to postgresql://")
 
 def get_db_connection():
     """Establish database connection with error handling."""
     try:
-        conn = psycopg2.connect(DATABASE_URL)
+        # For production (Render), we need SSL mode
+        if 'render.com' in DATABASE_URL or os.environ.get('RENDER'):
+            conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+        else:
+            conn = psycopg2.connect(DATABASE_URL)
         return conn
     except Exception as e:
         app.logger.error(f"Database connection error: {e}")
         return None
+
+# Add health check endpoint for Render
+@app.route('/health')
+def health_check():
+    """Health check endpoint for Render."""
+    try:
+        conn = get_db_connection()
+        if conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1")
+            cursor.close()
+            conn.close()
+            return jsonify({"status": "healthy", "database": "connected"}), 200
+        else:
+            return jsonify({"status": "unhealthy", "database": "disconnected"}), 500
+    except Exception as e:
+        app.logger.error(f"Health check failed: {e}")
+        return jsonify({"status": "unhealthy", "error": str(e)}), 500
+
+# Add session configuration for production
+app.config.update(
+    SESSION_COOKIE_SECURE=os.environ.get('RENDER', False),  # Only send cookies over HTTPS in production
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    PERMANENT_SESSION_LIFETIME=timedelta(days=7)
+)
+
 
 # -------------------- DATABASE INITIALIZATION --------------------
 def create_tables():
