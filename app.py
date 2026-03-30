@@ -1,322 +1,460 @@
 # -------------------- IMPORTS --------------------
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file
 from werkzeug.security import generate_password_hash, check_password_hash
-import sqlite3  # Changed from psycopg2
+import psycopg2
 import os
 from datetime import datetime, date, timedelta
 from calendar import month_name
 import uuid
 import json
 import io
-from pathlib import Path
+import bcrypt
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill
+
 
 # -------------------- FLASK APP SETUP --------------------
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "super_secret_key_change_later")
 
 # -------------------- DATABASE CONFIGURATION --------------------
-# Determine the base directory
-BASE_DIR = Path(__file__).parent
-
-# SQLite database file path
-DATABASE_PATH = BASE_DIR / "hospital.db"
+DATABASE_URL = os.environ.get("DATABASE_URL", 'postgresql://flask_user:Olarewaju1.@localhost:5432/hospital2_db')
 
 def get_db_connection():
-    """Establish SQLite database connection with error handling."""
+    """Establish database connection with error handling."""
     try:
-        conn = sqlite3.connect(str(DATABASE_PATH))
-        conn.row_factory = sqlite3.Row  # Return rows as dictionaries
-        # Enable foreign keys
-        conn.execute("PRAGMA foreign_keys = ON")
+        conn = psycopg2.connect(DATABASE_URL)
         return conn
     except Exception as e:
         app.logger.error(f"Database connection error: {e}")
         return None
 
-# JSON helper functions for SQLite
-def json_serialize(data):
-    """Serialize Python objects to JSON string for SQLite storage."""
-    return json.dumps(data)
-
-def json_deserialize(data):
-    """Deserialize JSON string from SQLite to Python objects."""
-    if data:
-        return json.loads(data)
-    return None
-
 # -------------------- DATABASE INITIALIZATION --------------------
 def create_tables():
     """Create all necessary tables if they don't exist."""
     queries = {
-        "pharmacists": """
-            CREATE TABLE IF NOT EXISTS pharmacists (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL,
-                is_active BOOLEAN DEFAULT 1,
+        "admin_users": """
+            CREATE TABLE IF NOT EXISTS admin_users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                full_name VARCHAR(100),
+                email VARCHAR(100),
+                role VARCHAR(50) DEFAULT 'Admin',
+                is_super_admin BOOLEAN DEFAULT FALSE,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER REFERENCES admin_users(id),
+                last_login TIMESTAMP
+            );
+        """,
+        
+        "cashier_users": """
+            CREATE TABLE IF NOT EXISTS cashier_users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                full_name VARCHAR(100),
+                email VARCHAR(100),
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER REFERENCES admin_users(id),
+                last_login TIMESTAMP
+            );
+        """,
+        
+        "admin_audit_logs": """
+            CREATE TABLE IF NOT EXISTS admin_audit_logs (
+                id SERIAL PRIMARY KEY,
+                admin_id INTEGER REFERENCES admin_users(id),
+                action VARCHAR(100) NOT NULL,
+                details TEXT,
+                ip_address VARCHAR(45),
+                user_agent TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """,
+        
+        "pharmacists": """
+            CREATE TABLE IF NOT EXISTS pharmacists (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                full_name VARCHAR(100),
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER REFERENCES admin_users(id)
+            );
+        """,
+        
+        "billing_users": """
+            CREATE TABLE IF NOT EXISTS billing_users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                full_name VARCHAR(100),
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER REFERENCES admin_users(id)
+            );
+        """,
+        
         "drugs": """
             CREATE TABLE IF NOT EXISTS drugs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                strength TEXT NOT NULL,
-                unit_price REAL NOT NULL,
-                stock_quantity INTEGER NOT NULL,
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                strength VARCHAR(50) NOT NULL,
+                unit_price DECIMAL(10, 2) NOT NULL,
+                stock_quantity INT NOT NULL,
                 expiry_date DATE NOT NULL,
-                low_stock_threshold INTEGER DEFAULT 20,
+                low_stock_threshold INT DEFAULT 20,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """,
+        
         "drug_sales": """
             CREATE TABLE IF NOT EXISTS drug_sales (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                receipt_no TEXT UNIQUE NOT NULL,
-                patient_name TEXT,
-                patient_id TEXT,
-                items TEXT NOT NULL,
-                subtotal REAL NOT NULL,
-                discount REAL DEFAULT 0.00,
-                tax REAL DEFAULT 0.00,
-                grand_total REAL NOT NULL,
-                pharmacist TEXT NOT NULL,
+                id SERIAL PRIMARY KEY,
+                receipt_no VARCHAR(50) UNIQUE NOT NULL,
+                patient_name VARCHAR(100),
+                patient_id VARCHAR(50),
+                items JSONB NOT NULL,
+                subtotal DECIMAL(10, 2) NOT NULL,
+                discount DECIMAL(10, 2) DEFAULT 0.00,
+                tax DECIMAL(10, 2) DEFAULT 0.00,
+                grand_total DECIMAL(10, 2) NOT NULL,
+                pharmacist VARCHAR(50) NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """,
+        
         "receipts": """
             CREATE TABLE IF NOT EXISTS receipts (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                patient_name TEXT,
-                patient_id TEXT,
-                subtotal REAL NOT NULL,
-                discount REAL DEFAULT 0.00,
-                tax REAL DEFAULT 0.00,
-                total_amount REAL NOT NULL,
-                grand_total REAL NOT NULL,
+                id SERIAL PRIMARY KEY,
+                patient_name VARCHAR(100),
+                patient_id VARCHAR(50),
+                subtotal DECIMAL(10, 2) NOT NULL,
+                discount DECIMAL(10, 2) DEFAULT 0.00,
+                tax DECIMAL(10, 2) DEFAULT 0.00,
+                total_amount DECIMAL(10, 2) NOT NULL,
+                grand_total DECIMAL(10, 2) NOT NULL,
+                pharmacist VARCHAR(50),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """,
+        
         "receipt_items": """
             CREATE TABLE IF NOT EXISTS receipt_items (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                receipt_id INTEGER NOT NULL,
-                drug_name TEXT NOT NULL,
-                strength TEXT NOT NULL,
-                quantity INTEGER NOT NULL,
-                unit_price REAL NOT NULL,
-                FOREIGN KEY (receipt_id) REFERENCES receipts(id) ON DELETE CASCADE
+                id SERIAL PRIMARY KEY,
+                receipt_id INT NOT NULL REFERENCES receipts(id) ON DELETE CASCADE,
+                drug_name VARCHAR(100) NOT NULL,
+                strength VARCHAR(50) NOT NULL,
+                quantity INT NOT NULL,
+                unit_price DECIMAL(10, 2) NOT NULL
             );
         """,
+        
         "stock_movements": """
             CREATE TABLE IF NOT EXISTS stock_movements (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                drug_id INTEGER NOT NULL,
-                movement_type TEXT NOT NULL,
-                quantity INTEGER NOT NULL,
-                user_id INTEGER NOT NULL,
+                id SERIAL PRIMARY KEY,
+                drug_id INT NOT NULL REFERENCES drugs(id) ON DELETE CASCADE,
+                movement_type VARCHAR(20) NOT NULL,
+                quantity INT NOT NULL,
+                user_id INT NOT NULL,
                 note TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (drug_id) REFERENCES drugs(id) ON DELETE CASCADE
-            );
-        """,
-        "billing_users": """
-            CREATE TABLE IF NOT EXISTS billing_users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """,
+        
         "billing_invoice": """
             CREATE TABLE IF NOT EXISTS billing_invoice (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                patient_name TEXT NOT NULL,
-                service_type TEXT NOT NULL,
-                amount REAL NOT NULL,
-                status TEXT DEFAULT 'UNPAID',
+                id SERIAL PRIMARY KEY,
+                patient_name VARCHAR(100) NOT NULL,
+                service_type VARCHAR(100) NOT NULL,
+                amount DECIMAL(10, 2) NOT NULL,
+                status VARCHAR(20) DEFAULT 'UNPAID',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """,
+        
         "billing_receipt": """
             CREATE TABLE IF NOT EXISTS billing_receipt (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                invoice_id INTEGER NOT NULL,
-                amount_paid REAL NOT NULL,
-                payment_method TEXT NOT NULL,
-                received_by TEXT NOT NULL,
-                payment_date TIMESTAMP NOT NULL,
-                FOREIGN KEY (invoice_id) REFERENCES billing_invoice(id) ON DELETE CASCADE
+                id SERIAL PRIMARY KEY,
+                invoice_id INT NOT NULL REFERENCES billing_invoice(id) ON DELETE CASCADE,
+                amount_paid DECIMAL(10, 2) NOT NULL,
+                payment_method VARCHAR(50) NOT NULL,
+                received_by VARCHAR(50) NOT NULL,
+                payment_date TIMESTAMP NOT NULL
             );
         """,
+        
         "payments": """
             CREATE TABLE IF NOT EXISTS payments (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                patient_name TEXT NOT NULL,
-                service_type TEXT NOT NULL,
-                subtotal REAL NOT NULL,
-                discount REAL DEFAULT 0.00,
-                tax REAL DEFAULT 0.00,
-                grand_total REAL NOT NULL,
-                amount_paid REAL NOT NULL,
-                balance REAL NOT NULL,
-                payment_method TEXT NOT NULL,
-                status TEXT NOT NULL,
+                id SERIAL PRIMARY KEY,
+                patient_name VARCHAR(100) NOT NULL,
+                service_type VARCHAR(100) NOT NULL,
+                subtotal DECIMAL(10, 2) NOT NULL,
+                discount DECIMAL(10, 2) DEFAULT 0.00,
+                tax DECIMAL(10, 2) DEFAULT 0.00,
+                grand_total DECIMAL(10, 2) NOT NULL,
+                amount_paid DECIMAL(10, 2) NOT NULL,
+                balance DECIMAL(10, 2) NOT NULL,
+                payment_method VARCHAR(50) NOT NULL,
+                status VARCHAR(20) NOT NULL,
                 payment_date DATE NOT NULL,
-                recorded_by INTEGER NOT NULL,
+                recorded_by INT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """,
+        
         "users": """
             CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL,
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """,
+        
+        # HR Tables
         "hr_users": """
             CREATE TABLE IF NOT EXISTS hr_users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL,
-                full_name TEXT NOT NULL,
-                email TEXT,
-                role TEXT DEFAULT 'HR Staff',
-                is_active BOOLEAN DEFAULT 1,
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                full_name VARCHAR(100) NOT NULL,
+                email VARCHAR(100),
+                role VARCHAR(50) DEFAULT 'HR Staff',
+                is_active BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """,
+        
         "departments": """
             CREATE TABLE IF NOT EXISTS departments (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                code TEXT UNIQUE NOT NULL,
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                code VARCHAR(20) UNIQUE NOT NULL,
                 description TEXT,
-                head_of_dept TEXT,
-                status TEXT DEFAULT 'Active',
+                head_of_dept VARCHAR(100),
+                status VARCHAR(20) DEFAULT 'Active',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """,
+        
         "staff": """
             CREATE TABLE IF NOT EXISTS staff (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                staff_id TEXT UNIQUE NOT NULL,
-                first_name TEXT NOT NULL,
-                last_name TEXT NOT NULL,
-                department_id INTEGER,
-                position TEXT NOT NULL,
-                employment_type TEXT,
-                email TEXT,
-                phone TEXT,
+                id SERIAL PRIMARY KEY,
+                staff_id VARCHAR(50) UNIQUE NOT NULL,
+                first_name VARCHAR(100) NOT NULL,
+                last_name VARCHAR(100) NOT NULL,
+                department_id INTEGER REFERENCES departments(id),
+                position VARCHAR(100) NOT NULL,
+                employment_type VARCHAR(50),
+                email VARCHAR(100),
+                phone VARCHAR(20),
                 hire_date DATE NOT NULL,
-                salary REAL,
-                status TEXT DEFAULT 'Active',
-                emergency_contact TEXT,
+                salary DECIMAL(12, 2),
+                status VARCHAR(20) DEFAULT 'Active',
+                emergency_contact VARCHAR(100),
                 address TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """,
+        
         "attendance": """
             CREATE TABLE IF NOT EXISTS attendance (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                staff_id INTEGER NOT NULL,
+                id SERIAL PRIMARY KEY,
+                staff_id INTEGER REFERENCES staff(id) ON DELETE CASCADE,
                 date DATE NOT NULL,
                 check_in TIME,
                 check_out TIME,
-                status TEXT,
+                status VARCHAR(20),
                 remarks TEXT,
-                recorded_by INTEGER,
+                recorded_by INTEGER REFERENCES hr_users(id),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (staff_id) REFERENCES staff(id) ON DELETE CASCADE,
-                FOREIGN KEY (recorded_by) REFERENCES hr_users(id) ON DELETE SET NULL
+                UNIQUE(staff_id, date)
             );
         """,
+        
         "leaves": """
             CREATE TABLE IF NOT EXISTS leaves (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                staff_id INTEGER NOT NULL,
-                leave_type TEXT NOT NULL,
+                id SERIAL PRIMARY KEY,
+                staff_id INTEGER REFERENCES staff(id) ON DELETE CASCADE,
+                leave_type VARCHAR(50) NOT NULL,
                 start_date DATE NOT NULL,
                 end_date DATE NOT NULL,
                 days_requested INTEGER NOT NULL,
                 reason TEXT,
-                status TEXT DEFAULT 'Pending',
-                approved_by INTEGER,
+                status VARCHAR(20) DEFAULT 'Pending',
+                approved_by INTEGER REFERENCES hr_users(id),
                 approved_at TIMESTAMP,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (staff_id) REFERENCES staff(id) ON DELETE CASCADE,
-                FOREIGN KEY (approved_by) REFERENCES hr_users(id) ON DELETE SET NULL
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """,
+        
         "schedules": """
             CREATE TABLE IF NOT EXISTS schedules (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                staff_id INTEGER NOT NULL,
+                id SERIAL PRIMARY KEY,
+                staff_id INTEGER REFERENCES staff(id) ON DELETE CASCADE,
                 schedule_date DATE NOT NULL,
-                shift_type TEXT,
+                shift_type VARCHAR(50),
                 start_time TIME NOT NULL,
                 end_time TIME NOT NULL,
-                location TEXT,
+                location VARCHAR(100),
                 notes TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (staff_id) REFERENCES staff(id) ON DELETE CASCADE
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """,
+        
         "payroll": """
             CREATE TABLE IF NOT EXISTS payroll (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                staff_id INTEGER NOT NULL,
-                pay_period TEXT,
-                basic_salary REAL,
-                allowances REAL,
-                deductions REAL,
-                net_salary REAL,
-                status TEXT DEFAULT 'Pending',
+                id SERIAL PRIMARY KEY,
+                staff_id INTEGER REFERENCES staff(id) ON DELETE CASCADE,
+                pay_period VARCHAR(50),
+                basic_salary DECIMAL(12, 2),
+                allowances DECIMAL(12, 2),
+                deductions DECIMAL(12, 2),
+                net_salary DECIMAL(12, 2),
+                status VARCHAR(20) DEFAULT 'Pending',
                 payment_date DATE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (staff_id) REFERENCES staff(id) ON DELETE CASCADE
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """,
+        
         "documents": """
             CREATE TABLE IF NOT EXISTS documents (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                staff_id INTEGER NOT NULL,
-                document_type TEXT,
-                document_name TEXT,
-                file_path TEXT,
-                uploaded_by INTEGER,
-                uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (staff_id) REFERENCES staff(id) ON DELETE CASCADE,
-                FOREIGN KEY (uploaded_by) REFERENCES hr_users(id) ON DELETE SET NULL
+                id SERIAL PRIMARY KEY,
+                staff_id INTEGER REFERENCES staff(id) ON DELETE CASCADE,
+                document_type VARCHAR(50),
+                document_name VARCHAR(255),
+                file_path VARCHAR(500),
+                uploaded_by INTEGER REFERENCES hr_users(id),
+                uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """,
+        
         "shift_swap_requests": """
             CREATE TABLE IF NOT EXISTS shift_swap_requests (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                schedule_id INTEGER NOT NULL,
-                from_staff_id INTEGER NOT NULL,
-                to_staff_id INTEGER NOT NULL,
+                id SERIAL PRIMARY KEY,
+                schedule_id INTEGER NOT NULL REFERENCES schedules(id) ON DELETE CASCADE,
+                from_staff_id INTEGER NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+                to_staff_id INTEGER NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
                 reason TEXT,
-                status TEXT DEFAULT 'Pending',
-                rejection_reason TEXT,
-                requested_by INTEGER,
+                status VARCHAR(20) DEFAULT 'Pending',
+                requested_by INTEGER REFERENCES hr_users(id),
                 requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                reviewed_by INTEGER,
-                reviewed_at TIMESTAMP,
-                approved_by INTEGER,
+                approved_by INTEGER REFERENCES hr_users(id),
                 approved_at TIMESTAMP,
-                FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE,
-                FOREIGN KEY (from_staff_id) REFERENCES staff(id) ON DELETE CASCADE,
-                FOREIGN KEY (to_staff_id) REFERENCES staff(id) ON DELETE CASCADE,
-                FOREIGN KEY (requested_by) REFERENCES hr_users(id) ON DELETE SET NULL,
-                FOREIGN KEY (reviewed_by) REFERENCES hr_users(id) ON DELETE SET NULL,
-                FOREIGN KEY (approved_by) REFERENCES hr_users(id) ON DELETE SET NULL
+                reviewed_by INTEGER REFERENCES hr_users(id),
+                reviewed_at TIMESTAMP,
+                rejection_reason TEXT
             );
         """
+    }
+
+    conn = get_db_connection()
+    if not conn:
+        app.logger.error("Cannot connect to database for table creation")
+        return
+
+    cursor = conn.cursor()
+    
+    # Enable UUID extension if needed
+    try:
+        cursor.execute("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";")
+    except Exception as e:
+        app.logger.warning(f"Could not enable uuid-ossp extension: {e}")
+    
+    # Create all tables
+    for table, query in queries.items():
+        try:
+            cursor.execute(query)
+            app.logger.info(f"Table '{table}' created or already exists")
+        except Exception as e:
+            app.logger.error(f"Error creating table {table}: {e}")
+    
+    # Create indexes for better performance
+    indexes = [
+        # Drug indexes
+        "CREATE INDEX IF NOT EXISTS idx_drugs_name ON drugs(name);",
+        "CREATE INDEX IF NOT EXISTS idx_drugs_expiry_date ON drugs(expiry_date);",
+        "CREATE INDEX IF NOT EXISTS idx_drugs_stock_quantity ON drugs(stock_quantity);",
+        
+        # Sales indexes
+        "CREATE INDEX IF NOT EXISTS idx_drug_sales_created_at ON drug_sales(created_at);",
+        "CREATE INDEX IF NOT EXISTS idx_drug_sales_receipt_no ON drug_sales(receipt_no);",
+        
+        # Receipt indexes
+        "CREATE INDEX IF NOT EXISTS idx_receipts_created_at ON receipts(created_at);",
+        "CREATE INDEX IF NOT EXISTS idx_receipt_items_receipt_id ON receipt_items(receipt_id);",
+        
+        # Payment indexes
+        "CREATE INDEX IF NOT EXISTS idx_payments_payment_date ON payments(payment_date);",
+        "CREATE INDEX IF NOT EXISTS idx_payments_patient_name ON payments(patient_name);",
+        "CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);",
+        
+        # HR indexes
+        "CREATE INDEX IF NOT EXISTS idx_staff_department ON staff(department_id);",
+        "CREATE INDEX IF NOT EXISTS idx_staff_status ON staff(status);",
+        "CREATE INDEX IF NOT EXISTS idx_attendance_staff_date ON attendance(staff_id, date);",
+        "CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(date);",
+        "CREATE INDEX IF NOT EXISTS idx_leaves_staff_status ON leaves(staff_id, status);",
+        "CREATE INDEX IF NOT EXISTS idx_leaves_status ON leaves(status);",
+        "CREATE INDEX IF NOT EXISTS idx_schedules_staff_date ON schedules(staff_id, schedule_date);",
+        "CREATE INDEX IF NOT EXISTS idx_payroll_staff_period ON payroll(staff_id, pay_period);",
+        "CREATE INDEX IF NOT EXISTS idx_shift_swap_requests_status ON shift_swap_requests(status);",
+        
+        # User indexes
+        "CREATE INDEX IF NOT EXISTS idx_admin_users_username ON admin_users(username);",
+        "CREATE INDEX IF NOT EXISTS idx_pharmacists_username ON pharmacists(username);",
+        "CREATE INDEX IF NOT EXISTS idx_billing_users_username ON billing_users(username);",
+        "CREATE INDEX IF NOT EXISTS idx_cashier_users_username ON cashier_users(username);",
+        
+        # Audit indexes
+        "CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_admin_id ON admin_audit_logs(admin_id);",
+        "CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_created_at ON admin_audit_logs(created_at);"
+    ]
+    
+    for index_query in indexes:
+        try:
+            cursor.execute(index_query)
+        except Exception as e:
+            app.logger.warning(f"Could not create index: {e}")
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
+    app.logger.info("All tables created successfully")
+# Make Python built-in functions and modules available in templates
+@app.context_processor
+def utility_processor():
+    from datetime import date, datetime, timedelta
+    return dict(
+        # Built-in functions
+        min=min,
+        max=max,
+        abs=abs,
+        round=round,
+        len=len,
+        range=range,
+        int=int,
+        float=float,
+        str=str,
+        # Date/time modules
+        date=date,
+        datetime=datetime,
+        timedelta=timedelta
+    )
+
+def create_default_users():
+    """Create default users for pharmacy and billing modules."""
+    default_users = {
+        "pharmacists": ("pharmacist1", "pharma123"),
+        "billing_users": ("billing1", "billing123")
     }
 
     conn = get_db_connection()
@@ -324,51 +462,16 @@ def create_tables():
         return
 
     cursor = conn.cursor()
-    for table, query in queries.items():
+    for table, (username, password) in default_users.items():
+        hashed_pw = generate_password_hash(password)
         try:
-            cursor.execute(query)
+            cursor.execute(f"""
+                INSERT INTO {table} (username, password)
+                VALUES (%s, %s)
+                ON CONFLICT (username) DO UPDATE SET password = EXCLUDED.password
+            """, (username, hashed_pw))
         except Exception as e:
-            app.logger.error(f"Error creating table {table}: {e}")
-    conn.commit()
-    cursor.close()
-    conn.close()
-
-def create_default_users():
-    """Create default users for pharmacy and billing modules."""
-    conn = get_db_connection()
-    if not conn:
-        return
-
-    cursor = conn.cursor()
-    
-    # Pharmacy user
-    hashed_pw = generate_password_hash("pharma123")
-    cursor.execute("""
-        INSERT OR IGNORE INTO pharmacists (username, password)
-        VALUES (?, ?)
-    """, ("pharmacist1", hashed_pw))
-    
-    # Billing user
-    hashed_pw = generate_password_hash("billing123")
-    cursor.execute("""
-        INSERT OR IGNORE INTO billing_users (username, password)
-        VALUES (?, ?)
-    """, ("billing1", hashed_pw))
-    
-    # HR user
-    hashed_pw = generate_password_hash("hr@admin123")
-    cursor.execute("""
-        INSERT OR IGNORE INTO hr_users (username, password, full_name, email, role)
-        VALUES (?, ?, ?, ?, ?)
-    """, ("hr_admin", hashed_pw, "HR Administrator", "admin@hospital.com", "HR Manager"))
-    
-    # General user
-    hashed_pw = generate_password_hash("admin123")
-    cursor.execute("""
-        INSERT OR IGNORE INTO users (username, password)
-        VALUES (?, ?)
-    """, ("admin", hashed_pw))
-    
+            app.logger.error(f"Error creating default user {username}: {e}")
     conn.commit()
     cursor.close()
     conn.close()
@@ -378,6 +481,7 @@ def format_currency(amount):
     """Format amount as Nigerian Naira currency."""
     return f"₦{amount:,.2f}"
 
+
 def build_stock_snapshot(rows, today):
     stock = []
     for r in rows:
@@ -386,7 +490,7 @@ def build_stock_snapshot(rows, today):
         threshold = r[6] or 20
 
         if expiry_date:
-            days_left = (date.fromisoformat(expiry_date) - today).days if isinstance(expiry_date, str) else (expiry_date - today).days
+            days_left = (expiry_date - today).days
             status = "EXPIRED" if days_left < 0 else "EXPIRING_SOON" if days_left <= 30 else "VALID"
         else:
             days_left = None
@@ -442,7 +546,7 @@ def pharmacy_login():
 
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT id, username, password FROM pharmacists WHERE username=? AND is_active=1",
+            "SELECT id, username, password FROM pharmacists WHERE username=%s AND is_active=TRUE",
             (username,)
         )
         pharmacist = cursor.fetchone()
@@ -514,7 +618,7 @@ def add_stock():
         cursor = conn.cursor()
         cursor.execute("""
             SELECT id, stock_quantity FROM drugs
-            WHERE name = ? AND strength = ? AND expiry_date = ?
+            WHERE name = %s AND strength = %s AND expiry_date = %s
         """, (drug_name, strength, expiry_date_obj))
 
         existing = cursor.fetchone()
@@ -522,15 +626,15 @@ def add_stock():
         if existing:
             cursor.execute("""
                 UPDATE drugs
-                SET stock_quantity = stock_quantity + ?,
-                    unit_price = ?,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
+                SET stock_quantity = stock_quantity + %s,
+                    unit_price = %s,
+                    updated_at = NOW()
+                WHERE id = %s
             """, (quantity, unit_price, existing[0]))
         else:
             cursor.execute("""
                 INSERT INTO drugs (name, strength, unit_price, stock_quantity, expiry_date)
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s)
             """, (drug_name, strength, unit_price, quantity, expiry_date_obj))
 
         conn.commit()
@@ -561,7 +665,7 @@ def api_drugs():
     params = ()
     
     if search:
-        query += " AND LOWER(name) LIKE LOWER(?)"
+        query += " AND LOWER(name) LIKE LOWER(%s)"
         params = (f"{search}%",)
     
     query += " ORDER BY name ASC"
@@ -590,10 +694,10 @@ def pharmacy_receipt():
     cur.execute("""
         INSERT INTO drug_sales
         (receipt_no, items, subtotal, discount, tax, grand_total, pharmacist)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
     """, (
         receipt_no,
-        json_serialize(data["items"]),
+        json.dumps(data["items"]),
         data["subtotal"],
         data["discount"],
         data["tax"],
@@ -627,8 +731,8 @@ def save_patient_info():
 
     cur.execute("""
         UPDATE drug_sales
-        SET patient_name=?, patient_id=?
-        WHERE receipt_no=?
+        SET patient_name=%s, patient_id=%s
+        WHERE receipt_no=%s
     """, (patient_name, patient_id, receipt_no))
 
     conn.commit()
@@ -649,7 +753,7 @@ def reprint_receipt(receipt_no):
         SELECT receipt_no, patient_name, patient_id, items,
                subtotal, discount, tax, grand_total, pharmacist, created_at
         FROM drug_sales
-        WHERE receipt_no = ?
+        WHERE receipt_no = %s
     """, (receipt_no,))
 
     row = cur.fetchone()
@@ -662,10 +766,10 @@ def reprint_receipt(receipt_no):
 
     receipt = {
         "receipt_no": row[0], "patient_name": row[1], "patient_id": row[2],
-        "items": json_deserialize(row[3]) if row[3] else [],
+        "items": json.loads(row[3]) if row[3] else [],
         "subtotal": float(row[4]), "discount": float(row[5]),
         "tax": float(row[6]), "grand_total": float(row[7]),
-        "pharmacist": row[8], "date": row[9]
+        "pharmacist": row[8], "date": row[9].strftime("%Y-%m-%d %H:%M:%S")
     }
 
     return render_template("receipt.html", receipt=receipt, hospital_name="All Saint Medical Center Nsukka, Enugu State")
@@ -685,21 +789,22 @@ def confirm_payment():
                 patient_name, patient_id, subtotal, discount, tax,
                 total_amount, grand_total, created_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id;
         """, (
             data.get("patient_name"), data.get("patient_id"),
             data["subtotal"], data["discount"], data["tax"],
             data["grand_total"], data["grand_total"], datetime.now()
         ))
 
-        receipt_id = cur.lastrowid
+        receipt_id = cur.fetchone()[0]
 
         for item in data["items"]:
             cur.execute("""
                 INSERT INTO receipt_items (
                     receipt_id, drug_name, strength, quantity, unit_price
                 )
-                VALUES (?, ?, ?, ?, ?);
+                VALUES (%s, %s, %s, %s, %s);
             """, (
                 receipt_id, item["drug_name"], item["strength"],
                 item["quantity"], item["unit_price"]
@@ -707,9 +812,9 @@ def confirm_payment():
 
             cur.execute("""
                 UPDATE drugs
-                SET stock_quantity = stock_quantity - ?,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE name = ? AND strength = ?;
+                SET stock_quantity = stock_quantity - %s,
+                    updated_at = NOW()
+                WHERE name = %s AND strength = %s;
             """, (
                 item["quantity"], item["drug_name"], item["strength"]
             ))
@@ -878,7 +983,7 @@ def revenue_report():
     cur.execute("""
         SELECT id, patient_name, patient_id, grand_total, created_at
         FROM receipts
-        WHERE DATE(created_at) BETWEEN ? AND ?
+        WHERE DATE(created_at) BETWEEN %s AND %s
         ORDER BY created_at ASC;
     """, (start_date, end_date))
     sales = cur.fetchall()
@@ -908,13 +1013,13 @@ def receipt(receipt_id):
     conn = get_db_connection()
     cur = conn.cursor()
 
-    cur.execute("SELECT * FROM receipts WHERE id = ?;", (receipt_id,))
+    cur.execute("SELECT * FROM receipts WHERE id = %s;", (receipt_id,))
     receipt = cur.fetchone()
 
     cur.execute("""
         SELECT drug_name, strength, quantity, unit_price
         FROM receipt_items
-        WHERE receipt_id = ?;
+        WHERE receipt_id = %s;
     """, (receipt_id,))
     items = cur.fetchall()
 
@@ -938,7 +1043,7 @@ def view_receipt(receipt_id):
     cur.execute("""
         SELECT id, patient_name, patient_id, subtotal, discount, tax, grand_total, created_at
         FROM receipts
-        WHERE id = ?
+        WHERE id = %s
     """, (receipt_id,))
 
     row = cur.fetchone()
@@ -956,13 +1061,13 @@ def view_receipt(receipt_id):
         "discount": float(row[4]),
         "tax": float(row[5]),
         "grand_total": float(row[6]),
-        "date": row[7]
+        "date": row[7].strftime("%Y-%m-%d %H:%M:%S")
     }
 
     cur.execute("""
         SELECT drug_name, strength, quantity, unit_price
         FROM receipt_items
-        WHERE receipt_id = ?
+        WHERE receipt_id = %s
     """, (receipt_id,))
 
     items_rows = cur.fetchall()
@@ -998,7 +1103,7 @@ def billing_login():
         cur.execute("""
             SELECT id, password
             FROM billing_users
-            WHERE username = ?
+            WHERE username = %s
         """, (username,))
 
         user = cur.fetchone()
@@ -1014,6 +1119,8 @@ def billing_login():
 
     return render_template("billing_login.html")
 
+# REPLACE the old billing_dashboard function with this one:
+
 @app.route("/billing/dashboard")
 def billing_dashboard():
     if "billing_user_id" not in session:
@@ -1028,6 +1135,8 @@ def billing_logout():
     session.pop("billing_username", None)
     flash("Logged out successfully", "success")
     return redirect(url_for("billing_login"))
+
+
 
 @app.route("/billing/confirm-payment", methods=["POST"])
 def billing_confirm_payment():
@@ -1060,14 +1169,15 @@ def billing_confirm_payment():
                 grand_total, amount_paid, balance, payment_method,
                 status, payment_date, recorded_by
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id;
         """, (
             patient_name, service_type, subtotal, discount, vat_amount,
             grand_total, amount_paid, balance, payment_method,
             status, payment_date, session["billing_user_id"]
         ))
 
-        payment_id = cur.lastrowid
+        payment_id = cur.fetchone()[0]
         conn.commit()
         flash(f"Payment recorded successfully. Receipt No: {payment_id}", "success")
 
@@ -1083,6 +1193,8 @@ def billing_confirm_payment():
         cur.close()
         conn.close()
 
+
+
 @app.route("/billing/receipt/<int:payment_id>")
 def billing_receipt(payment_id):
     if "billing_user_id" not in session:
@@ -1097,7 +1209,7 @@ def billing_receipt(payment_id):
                    tax, grand_total, amount_paid, balance, payment_method, 
                    status, payment_date, created_at
             FROM payments
-            WHERE id = ?
+            WHERE id = %s
         """, (payment_id,))
 
         row = cur.fetchone()
@@ -1117,8 +1229,8 @@ def billing_receipt(payment_id):
             "balance": float(row[8]),
             "payment_method": row[9],
             "status": row[10],
-            "payment_date": row[11],
-            "created_at": row[12]
+            "payment_date": row[11].strftime("%Y-%m-%d"),
+            "created_at": row[12].strftime("%Y-%m-%d %H:%M:%S")
         }
 
         cur.close()
@@ -1137,9 +1249,13 @@ def billing_receipt(payment_id):
         flash(f"Error retrieving receipt: {e}", "danger")
         return redirect(url_for("billing_dashboard"))
 
+# 
+
+
 @app.route("/billing/accept-payment", methods=["GET"])
 def accept_payment_page():
     return render_template("accept_payment.html")
+
 
 @app.route("/billing/receipt/<int:payment_id>")
 def billing_receipt_page(payment_id):
@@ -1154,7 +1270,7 @@ def billing_receipt_page(payment_id):
         SELECT id, patient_name, service_type, subtotal, discount, tax,
                grand_total, amount_paid, balance, payment_method, payment_date
         FROM payments
-        WHERE id = ?
+        WHERE id = %s
     """, (payment_id,))
     row = cur.fetchone()
     cur.close()
@@ -1175,7 +1291,7 @@ def billing_receipt_page(payment_id):
         "amount_paid": float(row[7]),
         "balance": float(row[8]),
         "payment_method": row[9],
-        "date": row[10]
+        "date": row[10].strftime("%Y-%m-%d %H:%M:%S")
     }
 
     return render_template("billing_receipt.html", receipt=receipt, hospital_name="All Saint Medical Center Nsukka, Enugu State")
@@ -1185,7 +1301,7 @@ def view_payment_receipt(payment_id):
     conn = get_db_connection()
     cur = conn.cursor()
 
-    cur.execute("SELECT * FROM payments WHERE id=?", (payment_id,))
+    cur.execute("SELECT * FROM payments WHERE id=%s", (payment_id,))
     payment = cur.fetchone()
     cur.close()
     conn.close()
@@ -1196,7 +1312,9 @@ def view_payment_receipt(payment_id):
 
     return render_template("payment_receipt.html", payment=payment)
 
+
 # -------------------- ROUTES: BILLING MODULE - PAYMENT HISTORY --------------------
+
 @app.route("/billing/payment-history")
 def payment_history():
     if "billing_user_id" not in session:
@@ -1225,33 +1343,33 @@ def payment_history():
     
     # Apply filters
     if patient_name:
-        query += " AND LOWER(patient_name) LIKE LOWER(?)"
-        count_query += " AND LOWER(patient_name) LIKE LOWER(?)"
+        query += " AND LOWER(patient_name) LIKE LOWER(%s)"
+        count_query += " AND LOWER(patient_name) LIKE LOWER(%s)"
         params.append(f"%{patient_name}%")
     
     if service_type:
-        query += " AND service_type = ?"
-        count_query += " AND service_type = ?"
+        query += " AND service_type = %s"
+        count_query += " AND service_type = %s"
         params.append(service_type)
     
     if payment_method:
-        query += " AND payment_method = ?"
-        count_query += " AND payment_method = ?"
+        query += " AND payment_method = %s"
+        count_query += " AND payment_method = %s"
         params.append(payment_method)
     
     if status:
-        query += " AND status = ?"
-        count_query += " AND status = ?"
+        query += " AND status = %s"
+        count_query += " AND status = %s"
         params.append(status)
     
     if start_date:
-        query += " AND payment_date >= ?"
-        count_query += " AND payment_date >= ?"
+        query += " AND payment_date >= %s"
+        count_query += " AND payment_date >= %s"
         params.append(start_date)
     
     if end_date:
-        query += " AND payment_date <= ?"
-        count_query += " AND payment_date <= ?"
+        query += " AND payment_date <= %s"
+        count_query += " AND payment_date <= %s"
         params.append(end_date)
     
     # Get total count
@@ -1259,7 +1377,7 @@ def payment_history():
     total_items = cur.fetchone()[0]
     
     # Apply ordering and pagination
-    query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+    query += " ORDER BY created_at DESC LIMIT %s OFFSET %s"
     offset = (page - 1) * per_page
     params.extend([per_page, offset])
     
@@ -1288,7 +1406,7 @@ def payment_history():
             "payment_method": payment[9],
             "status": payment[10],
             "payment_date": payment[11],
-            "created_at": payment[13] if len(payment) > 13 else None
+            "created_at": payment[13]
         }
         formatted_payments.append(payment_dict)
         total_amount += payment_dict["amount_paid"]
@@ -1309,6 +1427,7 @@ def payment_history():
         total_pages=total_pages,
         current_filters=request.args
     )
+
 
 @app.route("/billing/payment-history/export")
 def export_payment_history():
@@ -1331,27 +1450,27 @@ def export_payment_history():
     params = []
     
     if patient_name:
-        query += " AND LOWER(patient_name) LIKE LOWER(?)"
+        query += " AND LOWER(patient_name) LIKE LOWER(%s)"
         params.append(f"%{patient_name}%")
     
     if service_type:
-        query += " AND service_type = ?"
+        query += " AND service_type = %s"
         params.append(service_type)
     
     if payment_method:
-        query += " AND payment_method = ?"
+        query += " AND payment_method = %s"
         params.append(payment_method)
     
     if status:
-        query += " AND status = ?"
+        query += " AND status = %s"
         params.append(status)
     
     if start_date:
-        query += " AND payment_date >= ?"
+        query += " AND payment_date >= %s"
         params.append(start_date)
     
     if end_date:
-        query += " AND payment_date <= ?"
+        query += " AND payment_date <= %s"
         params.append(end_date)
     
     query += " ORDER BY created_at DESC"
@@ -1397,7 +1516,7 @@ def export_payment_history():
             payment[9],  # payment_method
             payment[10],  # status
             payment[11],  # payment_date
-            payment[13] if len(payment) > 13 else "",  # created_at
+            payment[13],  # created_at
             payment[12]   # recorded_by
         ])
     
@@ -1453,6 +1572,7 @@ def export_payment_history():
     )
 
 # -------------------- ROUTES: TODAY'S COLLECTION --------------------
+
 @app.route("/billing/todays-collection")
 def todays_collection():
     if "billing_user_id" not in session:
@@ -1468,7 +1588,7 @@ def todays_collection():
         SELECT id, patient_name, service_type, amount_paid, 
                payment_method, status, created_at
         FROM payments 
-        WHERE DATE(payment_date) = ?
+        WHERE DATE(payment_date) = %s
         ORDER BY created_at DESC
     """, (today,))
     
@@ -1530,8 +1650,6 @@ def todays_collection():
     for payment in today_payments:
         created_at = payment[6]
         if created_at:
-            if isinstance(created_at, str):
-                created_at = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
             hour = created_at.hour
             amount = float(payment[3])
             
@@ -1585,6 +1703,7 @@ def todays_collection():
         daily_target=daily_target
     )
 
+
 @app.route("/billing/todays-collection/export")
 def export_todays_collection():
     if "billing_user_id" not in session:
@@ -1601,7 +1720,7 @@ def export_todays_collection():
                grand_total, amount_paid, balance, payment_method, 
                status, payment_date, created_at
         FROM payments 
-        WHERE DATE(payment_date) = ?
+        WHERE DATE(payment_date) = %s
         ORDER BY created_at DESC
     """, (today,))
     
@@ -1694,15 +1813,6 @@ def export_todays_collection():
     
     # Add data rows
     for payment in today_payments:
-        created_at = payment[12]
-        if isinstance(created_at, str):
-            try:
-                created_time = datetime.fromisoformat(created_at.replace('Z', '+00:00')).strftime('%H:%M:%S')
-            except:
-                created_time = ''
-        else:
-            created_time = created_at.strftime('%H:%M:%S') if created_at else ''
-            
         ws.append([
             payment[0],  # id
             payment[1],  # patient_name
@@ -1715,8 +1825,8 @@ def export_todays_collection():
             float(payment[8]),  # balance
             payment[9],  # payment_method
             payment[10],  # status
-            payment[11],  # payment_date
-            created_time  # created_at time
+            payment[11].strftime('%Y-%m-%d'),  # payment_date
+            payment[12].strftime('%H:%M:%S') if payment[12] else ''  # created_at time
         ])
     
     # Apply borders to data rows
@@ -1756,6 +1866,7 @@ def export_todays_collection():
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
+
 # Custom filter for currency formatting
 @app.template_filter('currency')
 def currency_filter(amount):
@@ -1764,6 +1875,343 @@ def currency_filter(amount):
         return "₦0.00"
     return f"₦{float(amount):,.2f}"
 
+# -------------------- HR DATABASE TABLES --------------------
+def create_hr_tables():
+    """Create HR-related tables in PostgreSQL."""
+    conn = get_db_connection()
+    if not conn:
+        app.logger.error("Cannot connect to database for HR table creation")
+        return
+
+    cursor = conn.cursor()
+    
+    # Enable UUID extension if needed
+    try:
+        cursor.execute("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";")
+    except Exception as e:
+        app.logger.warning(f"Could not enable uuid-ossp extension: {e}")
+    
+    # HR Users Table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS hr_users (
+            id SERIAL PRIMARY KEY,
+            username VARCHAR(50) UNIQUE NOT NULL,
+            password VARCHAR(255) NOT NULL,
+            full_name VARCHAR(100) NOT NULL,
+            email VARCHAR(100),
+            role VARCHAR(50) DEFAULT 'HR Staff',
+            is_active BOOLEAN DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    
+    # Departments Table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS departments (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            code VARCHAR(20) UNIQUE NOT NULL,
+            description TEXT,
+            head_of_dept VARCHAR(100),
+            status VARCHAR(20) DEFAULT 'Active',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    
+    # Staff Table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS staff (
+            id SERIAL PRIMARY KEY,
+            staff_id VARCHAR(50) UNIQUE NOT NULL,
+            first_name VARCHAR(100) NOT NULL,
+            last_name VARCHAR(100) NOT NULL,
+            department_id INTEGER REFERENCES departments(id),
+            position VARCHAR(100) NOT NULL,
+            employment_type VARCHAR(50),
+            email VARCHAR(100),
+            phone VARCHAR(20),
+            hire_date DATE NOT NULL,
+            salary DECIMAL(12, 2),
+            status VARCHAR(20) DEFAULT 'Active',
+            emergency_contact VARCHAR(100),
+            address TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    
+    # Attendance Table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS attendance (
+            id SERIAL PRIMARY KEY,
+            staff_id INTEGER REFERENCES staff(id),
+            date DATE NOT NULL,
+            check_in TIME,
+            check_out TIME,
+            status VARCHAR(20),
+            remarks TEXT,
+            recorded_by INTEGER REFERENCES hr_users(id),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    
+    # Leaves Table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS leaves (
+            id SERIAL PRIMARY KEY,
+            staff_id INTEGER REFERENCES staff(id),
+            leave_type VARCHAR(50) NOT NULL,
+            start_date DATE NOT NULL,
+            end_date DATE NOT NULL,
+            days_requested INTEGER NOT NULL,
+            reason TEXT,
+            status VARCHAR(20) DEFAULT 'Pending',
+            approved_by INTEGER REFERENCES hr_users(id),
+            approved_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    
+    # Schedules Table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS schedules (
+            id SERIAL PRIMARY KEY,
+            staff_id INTEGER REFERENCES staff(id),
+            schedule_date DATE NOT NULL,
+            shift_type VARCHAR(50),
+            start_time TIME NOT NULL,
+            end_time TIME NOT NULL,
+            location VARCHAR(100),
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    
+    # Payroll Table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS payroll (
+            id SERIAL PRIMARY KEY,
+            staff_id INTEGER REFERENCES staff(id),
+            pay_period VARCHAR(50),
+            basic_salary DECIMAL(12, 2),
+            allowances DECIMAL(12, 2),
+            deductions DECIMAL(12, 2),
+            net_salary DECIMAL(12, 2),
+            status VARCHAR(20) DEFAULT 'Pending',
+            payment_date DATE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    
+    # Documents Table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS documents (
+            id SERIAL PRIMARY KEY,
+            staff_id INTEGER REFERENCES staff(id),
+            document_type VARCHAR(50),
+            document_name VARCHAR(255),
+            file_path VARCHAR(500),
+            uploaded_by INTEGER REFERENCES hr_users(id),
+            uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    
+    # Create indexes for better performance
+    indexes = [
+        "CREATE INDEX IF NOT EXISTS idx_staff_department ON staff(department_id);",
+        "CREATE INDEX IF NOT EXISTS idx_attendance_staff_date ON attendance(staff_id, date);",
+        "CREATE INDEX IF NOT EXISTS idx_leaves_staff_status ON leaves(staff_id, status);",
+        "CREATE INDEX IF NOT EXISTS idx_schedules_staff_date ON schedules(staff_id, schedule_date);",
+        "CREATE INDEX IF NOT EXISTS idx_payroll_staff_period ON payroll(staff_id, pay_period);",
+        "CREATE INDEX IF NOT EXISTS idx_staff_status ON staff(status);",
+        "CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(date);",
+        "CREATE INDEX IF NOT EXISTS idx_leaves_status ON leaves(status);"
+    ]
+    
+    for index_query in indexes:
+        try:
+            cursor.execute(index_query)
+        except Exception as e:
+            app.logger.warning(f"Could not create index: {e}")
+    
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
+    # Insert default data
+    create_default_hr_data()
+
+def create_default_hr_data():
+    """Insert default HR data into PostgreSQL tables."""
+    conn = get_db_connection()
+    if not conn:
+        return
+    
+    cursor = conn.cursor()
+    
+    try:
+        # Set autocommit to handle each statement separately
+        conn.autocommit = False
+        
+        # Default hashed password for 'hr@admin123'
+        hashed_password = generate_password_hash('hr@admin123')
+        
+        # Insert default HR users - use separate try-except blocks
+        try:
+            cursor.execute("""
+                INSERT INTO hr_users (username, password, full_name, email, role) 
+                VALUES 
+                    (%s, %s, %s, %s, %s),
+                    (%s, %s, %s, %s, %s)
+                ON CONFLICT (username) DO NOTHING;
+            """, (
+                'hr_admin', hashed_password, 'HR Administrator', 'admin@hospital.com', 'HR Manager',
+                'hr_staff', hashed_password, 'HR Staff', 'staff@hospital.com', 'HR Officer'
+            ))
+        except Exception as e:
+            app.logger.warning(f"Warning inserting HR users (they may already exist): {e}")
+            conn.rollback()
+            conn.autocommit = False
+        
+        # Insert sample departments - use separate transaction
+        try:
+            departments = [
+                ('Administration', 'ADMIN', 'Hospital Administration and Management', 'Dr. John Smith'),
+                ('Medical', 'MED', 'Medical Services Department', 'Dr. Sarah Johnson'),
+                ('Nursing', 'NURS', 'Nursing Services', 'Mrs. Grace Williams'),
+                ('Pharmacy', 'PHARM', 'Pharmacy Department', 'Mr. Michael Brown'),
+                ('Laboratory', 'LAB', 'Laboratory Services', 'Dr. David Miller'),
+                ('Radiology', 'RAD', 'Radiology Department', 'Dr. Lisa Davis'),
+                ('Finance', 'FIN', 'Finance and Billing Department', 'Mr. Robert Wilson'),
+                ('Human Resources', 'HR', 'Human Resources Department', 'Ms. Patricia Taylor'),
+                ('Maintenance', 'MAINT', 'Facility Maintenance', 'Mr. Thomas Anderson'),
+                ('Security', 'SEC', 'Hospital Security', 'Mr. Richard Clark')
+            ]
+            
+            for dept in departments:
+                try:
+                    cursor.execute("""
+                        INSERT INTO departments (name, code, description, head_of_dept) 
+                        VALUES (%s, %s, %s, %s)
+                        ON CONFLICT (code) DO NOTHING;
+                    """, dept)
+                except Exception as e:
+                    app.logger.warning(f"Warning inserting department {dept[0]}: {e}")
+                    continue  # Continue with next department
+            
+            conn.commit()
+            
+        except Exception as e:
+            app.logger.warning(f"Warning with departments transaction: {e}")
+            conn.rollback()
+        
+        # Get admin department ID for sample staff
+        try:
+            cursor.execute("SELECT id FROM departments WHERE code = 'ADMIN' LIMIT 1;")
+            admin_dept = cursor.fetchone()
+            
+            # Insert sample staff if departments exist
+            if admin_dept:
+                sample_staff = [
+                    ('EMP001', 'John', 'Doe', admin_dept[0], 'Hospital Administrator', 'Full-Time', 
+                     'john.doe@hospital.com', '08012345678', '2022-01-15', 850000.00, 'Jane Doe - 08087654321'),
+                    ('EMP002', 'Sarah', 'Johnson', admin_dept[0], 'Senior Doctor', 'Full-Time', 
+                     'sarah.j@hospital.com', '08023456789', '2021-03-20', 1200000.00, 'Mark Johnson - 08098765432'),
+                    ('EMP003', 'Michael', 'Brown', admin_dept[0], 'Chief Pharmacist', 'Full-Time', 
+                     'michael.b@hospital.com', '08034567890', '2020-06-10', 950000.00, 'Emily Brown - 08076543210'),
+                    ('EMP004', 'Grace', 'Williams', admin_dept[0], 'Head Nurse', 'Full-Time', 
+                     'grace.w@hospital.com', '08045678901', '2019-08-05', 750000.00, 'James Williams - 08065432109'),
+                    ('EMP005', 'David', 'Miller', admin_dept[0], 'Lab Technician', 'Full-Time', 
+                     'david.m@hospital.com', '08056789012', '2022-11-30', 650000.00, 'Sarah Miller - 08054321098')
+                ]
+                
+                for staff in sample_staff:
+                    try:
+                        cursor.execute("""
+                            INSERT INTO staff (staff_id, first_name, last_name, department_id, position, 
+                                              employment_type, email, phone, hire_date, salary, emergency_contact) 
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            ON CONFLICT (staff_id) DO NOTHING;
+                        """, staff)
+                    except Exception as e:
+                        app.logger.warning(f"Warning inserting staff {staff[0]}: {e}")
+                        continue
+                
+                conn.commit()
+                
+        except Exception as e:
+            app.logger.warning(f"Warning with staff insertion: {e}")
+            conn.rollback()
+        
+        # Get HR admin ID for recording
+        try:
+            cursor.execute("SELECT id FROM hr_users WHERE username = 'hr_admin' LIMIT 1;")
+            hr_admin = cursor.fetchone()
+            
+            # Get staff IDs for sample data
+            cursor.execute("SELECT id, staff_id FROM staff ORDER BY id LIMIT 5;")
+            staff_members = cursor.fetchall()
+            
+            if hr_admin and staff_members:
+                hr_admin_id = hr_admin[0]
+                today = date.today()
+                
+                # Insert sample attendance for today
+                for i, staff in enumerate(staff_members[:3]):  # First 3 staff
+                    check_in = '08:00:00' if i != 1 else '08:30:00'  # Make second staff late
+                    status = 'Present' if i != 1 else 'Late'
+                    
+                    try:
+                        cursor.execute("""
+                            INSERT INTO attendance (staff_id, date, check_in, check_out, status, recorded_by)
+                            VALUES (%s, %s, %s, %s, %s, %s)
+                            ON CONFLICT DO NOTHING;
+                        """, (staff[0], today, check_in, '16:00:00', status, hr_admin_id))
+                    except Exception as e:
+                        app.logger.warning(f"Warning inserting attendance for {staff[1]}: {e}")
+                        continue
+                
+                # Insert sample leave requests
+                try:
+                    cursor.execute("""
+                        INSERT INTO leaves (staff_id, leave_type, start_date, end_date, days_requested, reason, status)
+                        SELECT 
+                            id,
+                            'Annual Leave',
+                            %s + INTERVAL '5 days',
+                            %s + INTERVAL '12 days',
+                            8,
+                            'Family vacation',
+                            'Pending'
+                        FROM staff WHERE staff_id = 'EMP004'
+                        UNION ALL
+                        SELECT 
+                            id,
+                            'Sick Leave',
+                            %s - INTERVAL '2 days',
+                            %s + INTERVAL '2 days',
+                            5,
+                            'Medical treatment',
+                            'Approved'
+                        FROM staff WHERE staff_id = 'EMP005'
+                        ON CONFLICT DO NOTHING;
+                    """, (today, today, today, today))
+                except Exception as e:
+                    app.logger.warning(f"Warning inserting leaves: {e}")
+                
+                conn.commit()
+                
+        except Exception as e:
+            app.logger.warning(f"Warning with sample data insertion: {e}")
+            conn.rollback()
+        
+    except Exception as e:
+        app.logger.error(f"Error in create_default_hr_data: {e}")
+        conn.rollback()
+    
+    finally:
+        cursor.close()
+        conn.close()
 # -------------------- ROUTES: HR MODULE --------------------
 @app.route("/hr/login", methods=["GET", "POST"])
 def hr_login():
@@ -1783,22 +2231,30 @@ def hr_login():
             cur.execute("""
                 SELECT id, username, password, full_name, role
                 FROM hr_users
-                WHERE username = ? AND is_active = 1
+                WHERE username = %s AND is_active = TRUE
             """, (username,))
 
             user = cur.fetchone()
             cur.close()
             conn.close()
 
-            if user and check_password_hash(user[2], password):
-                session["hr_user_id"] = user[0]
-                session["hr_username"] = user[1]
-                session["hr_full_name"] = user[3]
-                session["hr_role"] = user[4]
-                flash(f"Welcome, {user[3]}!", "success")
-                return redirect(url_for("hr_dashboard"))
+            if user:
+                stored_hash = user[2]
+                
+                # SIMPLE CHECK for our known bcrypt hash
+                known_hash = "$2b$12$LQv3c1yqBWVHxkd0LsZcdeJN8L7Fmm8Zz3qG9XwFk8kC1YdV6n4Oq"
+                
+                if stored_hash == known_hash and password == "hr@admin123":
+                    session["hr_user_id"] = user[0]
+                    session["hr_username"] = user[1]
+                    session["hr_full_name"] = user[3]
+                    session["hr_role"] = user[4]
+                    flash(f"Welcome, {user[3]}!", "success")
+                    return redirect(url_for("hr_dashboard"))
+                else:
+                    flash("Invalid password. Use: hr@admin123", "danger")
             else:
-                flash("Invalid login credentials", "danger")
+                flash("Invalid username. Use: hr_admin or hr_staff", "danger")
 
         except Exception as e:
             app.logger.error(f"HR login error: {e}")
@@ -1806,6 +2262,15 @@ def hr_login():
 
     return render_template("hr_login.html", 
                          hospital_name="All Saint Medical Center Nsukka, Enugu State")    
+
+
+# @app.route("/hr/scheduling")
+# def scheduling():
+#     if "hr_user_id" not in session:
+#         return redirect(url_for("hr_login"))
+#     return render_template("module_placeholder.html", 
+#                          module_name="Scheduling",
+#                          description="Create and manage work schedules and shifts")
 
 @app.route("/hr/leave-management")
 def leave_management():
@@ -1863,6 +2328,14 @@ def hr_reports():
     return render_template("module_placeholder.html", 
                          module_name="HR Reports",
                          description="Generate HR analytics and reports")
+
+# # -------------------- QUICK ACTION PLACEHOLDERS --------------------
+# @app.route("/hr/add-staff")
+# def add_staff():
+#     if "hr_user_id" not in session:
+#         return redirect(url_for("hr_login"))
+#     flash("Feature coming soon: Add New Staff", "info")
+#     return redirect(url_for("hr_dashboard"))
 
 @app.route("/hr/approve-leave")
 def approve_leave():
@@ -1922,7 +2395,7 @@ def hr_dashboard():
         cur.execute("""
             SELECT COUNT(DISTINCT staff_id) 
             FROM attendance 
-            WHERE date = ? AND status IN ('Present', 'Late')
+            WHERE date = %s AND status IN ('Present', 'Late')
         """, (today,))
         active_staff = cur.fetchone()[0] or 0
         
@@ -1930,7 +2403,7 @@ def hr_dashboard():
         cur.execute("""
             SELECT COUNT(*) 
             FROM leaves 
-            WHERE ? BETWEEN start_date AND end_date 
+            WHERE %s BETWEEN start_date AND end_date 
             AND status = 'Approved'
         """, (today,))
         on_leave = cur.fetchone()[0] or 0
@@ -1948,7 +2421,7 @@ def hr_dashboard():
         cur.execute("""
             SELECT COUNT(*) 
             FROM schedules 
-            WHERE schedule_date BETWEEN ? AND ?
+            WHERE schedule_date BETWEEN %s AND %s
         """, (today, next_week))
         upcoming_shifts = cur.fetchone()[0] or 0
         
@@ -1964,7 +2437,7 @@ def hr_dashboard():
         cur.execute("""
             SELECT COUNT(*) 
             FROM attendance 
-            WHERE date = ? AND status = 'Late'
+            WHERE date = %s AND status = 'Late'
         """, (today,))
         late_arrivals = cur.fetchone()[0] or 0
         
@@ -2059,7 +2532,6 @@ def staff_management():
                          departments_count=departments_count,
                          hospital_name="All Saint Medical Center Nsukka, Enugu State",
                          current_year=date.today().year)    
-
 # View Staff Details
 @app.route("/hr/staff/<int:staff_id>")
 def view_staff(staff_id):
@@ -2075,7 +2547,7 @@ def view_staff(staff_id):
             SELECT s.*, d.name as department_name, d.code as department_code
             FROM staff s
             LEFT JOIN departments d ON s.department_id = d.id
-            WHERE s.id = ?
+            WHERE s.id = %s
         """, (staff_id,))
         
         staff = cur.fetchone()
@@ -2105,11 +2577,13 @@ def view_staff(staff_id):
         }
         
         # Calculate employment duration
+        from datetime import date
         today = date.today()
         
         # Ensure hire_date is a date object
         hire_date = staff[9]
         if isinstance(hire_date, str):
+            from datetime import datetime
             hire_date = datetime.strptime(hire_date, '%Y-%m-%d').date()
         
         years = today.year - hire_date.year
@@ -2135,7 +2609,6 @@ def view_staff(staff_id):
                          today=today,
                          employment_duration=employment_duration,
                          hospital_name="All Saint Medical Center Nsukka, Enugu State")
-
 # Add New Staff
 @app.route("/hr/staff/add", methods=["GET", "POST"])
 def add_staff():
@@ -2171,7 +2644,7 @@ def add_staff():
         
         try:
             # Check if staff ID already exists
-            cur.execute("SELECT id FROM staff WHERE staff_id = ?", (staff_id,))
+            cur.execute("SELECT id FROM staff WHERE staff_id = %s", (staff_id,))
             if cur.fetchone():
                 flash(f"Staff ID '{staff_id}' already exists. Please use a different ID.", "danger")
                 return redirect(url_for("add_staff"))
@@ -2188,7 +2661,7 @@ def add_staff():
                     staff_id, first_name, last_name, department_id, 
                     position, employment_type, email, phone, 
                     hire_date, salary, emergency_contact, address, status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'Active')
             """, (
                 staff_id, first_name, last_name, department_id,
                 position, employment_type, email, phone,
@@ -2199,7 +2672,7 @@ def add_staff():
             flash(f"Staff member {first_name} {last_name} (ID: {staff_id}) added successfully!", "success")
             
             # Redirect to staff management or view the new staff
-            cur.execute("SELECT id FROM staff WHERE staff_id = ?", (staff_id,))
+            cur.execute("SELECT id FROM staff WHERE staff_id = %s", (staff_id,))
             new_staff_id = cur.fetchone()[0]
             return redirect(url_for("view_staff", staff_id=new_staff_id))
             
@@ -2229,7 +2702,7 @@ def add_staff():
         # Get next staff ID suggestion
         cur.execute("""
             SELECT MAX(staff_id) FROM staff 
-            WHERE staff_id LIKE 'EMP%'
+            WHERE staff_id ~ '^EMP[0-9]+$'
         """)
         last_staff_id = cur.fetchone()[0]
         
@@ -2290,19 +2763,19 @@ def edit_staff(staff_id):
         try:
             cur.execute("""
                 UPDATE staff SET
-                    first_name = ?,
-                    last_name = ?,
-                    department_id = ?,
-                    position = ?,
-                    employment_type = ?,
-                    email = ?,
-                    phone = ?,
-                    salary = ?,
-                    status = ?,
-                    emergency_contact = ?,
-                    address = ?,
+                    first_name = %s,
+                    last_name = %s,
+                    department_id = %s,
+                    position = %s,
+                    employment_type = %s,
+                    email = %s,
+                    phone = %s,
+                    salary = %s,
+                    status = %s,
+                    emergency_contact = %s,
+                    address = %s,
                     updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
+                WHERE id = %s
             """, (
                 first_name, last_name, department_id,
                 position, employment_type, email, phone,
@@ -2321,7 +2794,7 @@ def edit_staff(staff_id):
     
     # GET request - load staff data
     try:
-        cur.execute("SELECT * FROM staff WHERE id = ?", (staff_id,))
+        cur.execute("SELECT * FROM staff WHERE id = %s", (staff_id,))
         staff = cur.fetchone()
         
         if not staff:
@@ -2346,7 +2819,9 @@ def edit_staff(staff_id):
                          departments=departments,
                          hospital_name="All Saint Medical Center Nsukka, Enugu State")
 
+
 # ==================== ROUTES: SCHEDULING MODULE ====================
+
 @app.route("/hr/scheduling")
 def scheduling():
     if "hr_user_id" not in session:
@@ -2368,7 +2843,7 @@ def scheduling():
             FROM schedules s
             JOIN staff st ON s.staff_id = st.id
             LEFT JOIN departments d ON st.department_id = d.id
-            WHERE s.schedule_date >= ? AND s.schedule_date < ?
+            WHERE s.schedule_date >= %s AND s.schedule_date < %s
             ORDER BY s.schedule_date, s.start_time
         """, (current_month, next_month))
         
@@ -2419,6 +2894,7 @@ def scheduling():
                          current_month=current_month.strftime("%B %Y"),
                          hospital_name="All Saint Medical Center Nsukka, Enugu State")
     
+    
 @app.route("/hr/scheduling/create", methods=["GET", "POST"])
 def create_schedule():
     if "hr_user_id" not in session:
@@ -2444,7 +2920,7 @@ def create_schedule():
             # Check for existing schedule for same staff on same date
             cur.execute("""
                 SELECT id FROM schedules 
-                WHERE staff_id = ? AND schedule_date = ?
+                WHERE staff_id = %s AND schedule_date = %s
             """, (staff_id, schedule_date))
             
             if cur.fetchone():
@@ -2456,7 +2932,7 @@ def create_schedule():
                 INSERT INTO schedules (
                     staff_id, schedule_date, shift_type, 
                     start_time, end_time, location, notes
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
             """, (staff_id, schedule_date, shift_type, start_time, end_time, location, notes))
             
             conn.commit()
@@ -2548,16 +3024,16 @@ def view_roster():
             FROM schedules s
             JOIN staff st ON s.staff_id = st.id
             LEFT JOIN departments d ON st.department_id = d.id
-            WHERE s.schedule_date BETWEEN ? AND ?
+            WHERE s.schedule_date BETWEEN %s AND %s
         """
         params = [start_date, end_date]
         
         if department_id:
-            query += " AND st.department_id = ?"
+            query += " AND st.department_id = %s"
             params.append(department_id)
         
         if staff_id:
-            query += " AND s.staff_id = ?"
+            query += " AND s.staff_id = %s"
             params.append(staff_id)
         
         query += " ORDER BY s.schedule_date, d.name, st.first_name, s.start_time"
@@ -2578,15 +3054,10 @@ def view_roster():
         """)
         staff_list = cur.fetchall()
         
-        # Group schedules by date for calendar view
+        # Group schedules by date for calendar view - FIXED: Use tuple indices
         schedule_dict = {}
         for schedule in schedules:
-            schedule_date = schedule[1]
-            if isinstance(schedule_date, str):
-                schedule_date = schedule_date
-            else:
-                schedule_date = schedule_date.strftime("%Y-%m-%d")
-                
+            schedule_date = schedule[1].strftime("%Y-%m-%d")
             if schedule_date not in schedule_dict:
                 schedule_dict[schedule_date] = []
             
@@ -2637,7 +3108,6 @@ def view_roster():
                          unique_staff=unique_staff,
                          unique_departments=unique_departments,
                          hospital_name="All Saint Medical Center Nsukka, Enugu State")
-
 @app.route("/hr/scheduling/shift-swap", methods=["GET", "POST"])
 def shift_swap():
     if "hr_user_id" not in session:
@@ -2661,7 +3131,7 @@ def shift_swap():
                 cur.execute("""
                     SELECT schedule_date, start_time, end_time, shift_type 
                     FROM schedules 
-                    WHERE id = ?
+                    WHERE id = %s
                 """, (schedule_id,))
                 schedule = cur.fetchone()
                 
@@ -2672,19 +3142,19 @@ def shift_swap():
                 # Check if staff is available on that date
                 cur.execute("""
                     SELECT id FROM schedules 
-                    WHERE staff_id = ? AND schedule_date = ?
+                    WHERE staff_id = %s AND schedule_date = %s
                 """, (to_staff_id, schedule[0]))
                 
                 if cur.fetchone():
                     flash("Selected staff already has a schedule on this date", "warning")
                     return redirect(url_for("shift_swap"))
                 
-                # Create shift swap request
+                # Create shift swap request (you'll need to create this table)
                 cur.execute("""
                     INSERT INTO shift_swap_requests (
                         schedule_id, from_staff_id, to_staff_id, 
                         reason, status, requested_by, requested_at
-                    ) VALUES (?, ?, ?, ?, 'Pending', ?, CURRENT_TIMESTAMP)
+                    ) VALUES (%s, %s, %s, %s, 'Pending', %s, NOW())
                 """, (schedule_id, from_staff_id, to_staff_id, reason, session["hr_user_id"]))
                 
                 conn.commit()
@@ -2704,7 +3174,7 @@ def shift_swap():
                 cur.execute("""
                     SELECT schedule_id, from_staff_id, to_staff_id 
                     FROM shift_swap_requests 
-                    WHERE id = ? AND status = 'Pending'
+                    WHERE id = %s AND status = 'Pending'
                 """, (swap_id,))
                 
                 swap_request = cur.fetchone()
@@ -2715,17 +3185,17 @@ def shift_swap():
                 # Update schedule with new staff
                 cur.execute("""
                     UPDATE schedules 
-                    SET staff_id = ? 
-                    WHERE id = ?
+                    SET staff_id = %s 
+                    WHERE id = %s
                 """, (swap_request[2], swap_request[0]))
                 
                 # Update swap request status
                 cur.execute("""
                     UPDATE shift_swap_requests 
                     SET status = 'Approved', 
-                        approved_by = ?, 
-                        approved_at = CURRENT_TIMESTAMP 
-                    WHERE id = ?
+                        approved_by = %s, 
+                        approved_at = NOW() 
+                    WHERE id = %s
                 """, (session["hr_user_id"], swap_id))
                 
                 conn.commit()
@@ -2745,10 +3215,10 @@ def shift_swap():
                 cur.execute("""
                     UPDATE shift_swap_requests 
                     SET status = 'Rejected', 
-                        rejection_reason = ?,
-                        reviewed_by = ?, 
-                        reviewed_at = CURRENT_TIMESTAMP 
-                    WHERE id = ?
+                        rejection_reason = %s,
+                        reviewed_by = %s, 
+                        reviewed_at = NOW() 
+                    WHERE id = %s
                 """, (rejection_reason, session["hr_user_id"], swap_id))
                 
                 conn.commit()
@@ -2841,17 +3311,17 @@ def schedule_reports():
                     d.name as department,
                     st.first_name || ' ' || st.last_name as staff_name,
                     COUNT(*) as total_shifts,
-                    SUM((JULIANDAY(end_time) - JULIANDAY(start_time)) * 24) as total_hours,
+                    SUM(EXTRACT(EPOCH FROM (end_time - start_time))/3600) as total_hours,
                     COUNT(DISTINCT sch.schedule_date) as days_scheduled
                 FROM schedules sch
                 JOIN staff st ON sch.staff_id = st.id
                 LEFT JOIN departments d ON st.department_id = d.id
-                WHERE sch.schedule_date BETWEEN ? AND ?
+                WHERE sch.schedule_date BETWEEN %s AND %s
             """
             params = [start_date, end_date]
             
             if department_id:
-                query += " AND st.department_id = ?"
+                query += " AND st.department_id = %s"
                 params.append(department_id)
             
             query += """
@@ -2873,16 +3343,16 @@ def schedule_reports():
                     sch.shift_type,
                     sch.start_time,
                     sch.end_time,
-                    (JULIANDAY(sch.end_time) - JULIANDAY(sch.start_time)) * 24 as hours
+                    EXTRACT(EPOCH FROM (sch.end_time - sch.start_time))/3600 as hours
                 FROM schedules sch
                 JOIN staff st ON sch.staff_id = st.id
                 LEFT JOIN departments d ON st.department_id = d.id
-                WHERE sch.schedule_date BETWEEN ? AND ?
+                WHERE sch.schedule_date BETWEEN %s AND %s
             """
             params = [start_date, end_date]
             
             if department_id:
-                query += " AND st.department_id = ?"
+                query += " AND st.department_id = %s"
                 params.append(department_id)
             
             query += " ORDER BY sch.schedule_date, sch.start_time"
@@ -2898,15 +3368,15 @@ def schedule_reports():
                 SELECT 
                     sch.schedule_date,
                     COUNT(DISTINCT sch.staff_id) as staff_count,
-                    GROUP_CONCAT(st.first_name || ' ' || st.last_name, ', ') as staff_names
+                    STRING_AGG(st.first_name || ' ' || st.last_name, ', ') as staff_names
                 FROM schedules sch
                 JOIN staff st ON sch.staff_id = st.id
-                WHERE sch.schedule_date BETWEEN ? AND ?
+                WHERE sch.schedule_date BETWEEN %s AND %s
             """
             params = [start_date, end_date]
             
             if department_id:
-                query += " AND st.department_id = ?"
+                query += " AND st.department_id = %s"
                 params.append(department_id)
             
             query += """
@@ -2957,7 +3427,7 @@ def delete_schedule(schedule_id):
     cur = conn.cursor()
     
     try:
-        cur.execute("DELETE FROM schedules WHERE id = ?", (schedule_id,))
+        cur.execute("DELETE FROM schedules WHERE id = %s", (schedule_id,))
         conn.commit()
         return jsonify({"success": True, "message": "Schedule deleted successfully"})
         
@@ -2969,6 +3439,88 @@ def delete_schedule(schedule_id):
     finally:
         cur.close()
         conn.close()
+        
+# ==================== ROUTES: SCHEDULING MODULE ====================
+
+# @app.route("/hr/scheduling")
+# def scheduling():
+#     if "hr_user_id" not in session:
+#         return redirect(url_for("hr_login"))
+    
+#     conn = get_db_connection()
+#     cur = conn.cursor()
+    
+#     try:
+#         # Get current month schedules
+#         current_month = date.today().replace(day=1)
+#         if current_month.month == 12:
+#             next_month = current_month.replace(year=current_month.year + 1, month=1)
+#         else:
+#             next_month = current_month.replace(month=current_month.month + 1)
+        
+#         cur.execute("""
+#             SELECT s.*, st.first_name, st.last_name, st.position, d.name as department_name
+#             FROM schedules s
+#             JOIN staff st ON s.staff_id = st.id
+#             LEFT JOIN departments d ON st.department_id = d.id
+#             WHERE s.schedule_date >= %s AND s.schedule_date < %s
+#             ORDER BY s.schedule_date, s.start_time
+#         """, (current_month, next_month))
+        
+#         schedules = cur.fetchall()
+        
+#         # Get statistics
+#         cur.execute("SELECT COUNT(*) FROM schedules WHERE schedule_date >= CURRENT_DATE")
+#         upcoming_shifts = cur.fetchone()[0] or 0
+        
+#         cur.execute("""
+#             SELECT COUNT(DISTINCT staff_id) 
+#             FROM schedules 
+#             WHERE schedule_date >= CURRENT_DATE
+#         """)
+#         staff_scheduled = cur.fetchone()[0] or 0
+        
+#         # Get departments for filter
+#         cur.execute("SELECT id, name FROM departments WHERE status = 'Active' ORDER BY name")
+#         departments = cur.fetchall()
+        
+#         # Get staff for filter
+#         cur.execute("""
+#             SELECT id, first_name, last_name, position 
+#             FROM staff 
+#             WHERE status = 'Active' 
+#             ORDER BY first_name, last_name
+#         """)
+#         staff_list = cur.fetchall()
+        
+#     except Exception as e:
+#         app.logger.error(f"Error fetching scheduling data: {e}")
+#         schedules = []
+#         upcoming_shifts = 0
+#         staff_scheduled = 0
+#         departments = []
+#         staff_list = []
+    
+#     finally:
+#         cur.close()
+#         conn.close()
+    
+#     return render_template("scheduling_dashboard.html",
+#                          schedules=schedules,
+#                          upcoming_shifts=upcoming_shifts,
+#                          staff_scheduled=staff_scheduled,
+#                          departments=departments,
+#                          staff_list=staff_list,
+#                          current_month=current_month.strftime("%B %Y"),
+#                          hospital_name="All Saint Medical Center Nsukka, Enugu State")
+
+
+
+
+
+
+
+
 
 @app.route("/hr/scheduling/check-availability", methods=["POST"])
 def check_availability():
@@ -2991,9 +3543,9 @@ def check_availability():
     try:
         cur.execute("""
             SELECT id FROM schedules 
-            WHERE staff_id = ? 
-            AND schedule_date = ?
-            AND NOT (? <= start_time OR ? >= end_time)
+            WHERE staff_id = %s 
+            AND schedule_date = %s
+            AND NOT (%s <= start_time OR %s >= end_time)
         """, (staff_id, schedule_date, end_time, start_time))
         
         conflict = cur.fetchone()
@@ -3011,9 +3563,1820 @@ def check_availability():
     finally:
         cur.close()
         conn.close()
+        
+        
+# Add these tables to your existing create_tables() function:
+def create_tables():
+    """Create all necessary tables if they don't exist."""
+    queries = {
+        # ... your existing tables ...
+        
+        # Add these new tables for admin module:
+        "admin_users": """
+            CREATE TABLE IF NOT EXISTS admin_users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                full_name VARCHAR(100),
+                email VARCHAR(100),
+                role VARCHAR(50) DEFAULT 'Admin',
+                is_super_admin BOOLEAN DEFAULT FALSE,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER REFERENCES admin_users(id),
+                last_login TIMESTAMP
+            );
+        """,
+        "cashier_users": """
+            CREATE TABLE IF NOT EXISTS cashier_users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                full_name VARCHAR(100),
+                email VARCHAR(100),
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER REFERENCES admin_users(id),
+                last_login TIMESTAMP
+            );
+        """,
+        "admin_audit_logs": """
+            CREATE TABLE IF NOT EXISTS admin_audit_logs (
+                id SERIAL PRIMARY KEY,
+                admin_id INTEGER REFERENCES admin_users(id),
+                action VARCHAR(100) NOT NULL,
+                details TEXT,
+                ip_address VARCHAR(45),
+                user_agent TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """,
+        
+        # Make sure these exist (they should from your existing code):
+        "pharmacists": """
+            CREATE TABLE IF NOT EXISTS pharmacists (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                full_name VARCHAR(100),
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER REFERENCES admin_users(id)
+            );
+        """,
+        "billing_users": """
+            CREATE TABLE IF NOT EXISTS billing_users (
+                id SERIAL PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password VARCHAR(255) NOT NULL,
+                full_name VARCHAR(100),
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                created_by INTEGER REFERENCES admin_users(id)
+            );
+        """
+    }
 
-# -------------------- RUN APP --------------------
+    conn = get_db_connection()
+    if not conn:
+        return
+
+    cursor = conn.cursor()
+    for table, query in queries.items():
+        try:
+            cursor.execute(query)
+        except Exception as e:
+            app.logger.error(f"Error creating table {table}: {e}")
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+def create_default_admin():
+    """Create default admin user."""
+    conn = get_db_connection()
+    if not conn:
+        return
+
+    cursor = conn.cursor()
+    try:
+        # Check if admin exists
+        cursor.execute("SELECT COUNT(*) FROM admin_users WHERE username = 'admin'")
+        if cursor.fetchone()[0] == 0:
+            hashed_pw = generate_password_hash('admin123')
+            cursor.execute("""
+                INSERT INTO admin_users (username, password, full_name, email, role, is_super_admin)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, ('admin', hashed_pw, 'System Administrator', 'admin@hospital.com', 'Super Admin', True))
+            conn.commit()
+            app.logger.info("Default admin user created")
+    except Exception as e:
+        app.logger.error(f"Error creating default admin: {e}")
+    finally:
+        cursor.close()
+        conn.close()
+
+# Add this to your existing helper functions:
+def log_admin_action(admin_id, action, details=None):
+    """Log admin actions for audit trail."""
+    conn = get_db_connection()
+    if not conn:
+        return
+    
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            INSERT INTO admin_audit_logs (admin_id, action, details, ip_address, user_agent)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (admin_id, action, details, request.remote_addr, request.user_agent.string))
+        conn.commit()
+    except Exception as e:
+        app.logger.error(f"Error logging admin action: {e}")
+    finally:
+        cursor.close()
+        conn.close()
+
+# ==================== ROUTES: ADMIN MODULE ====================
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+
+        conn = get_db_connection()
+        if not conn:
+            flash("Database connection error", "danger")
+            return render_template("admin_login.html")
+
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, username, password, full_name, role, is_active 
+            FROM admin_users 
+            WHERE username=%s
+        """, (username,))
+        admin = cursor.fetchone()
+
+        if admin and admin[5]:  # Check if is_active
+            if check_password_hash(admin[2], password):
+                session['admin_id'] = admin[0]
+                session['admin_username'] = admin[1]
+                session['admin_full_name'] = admin[3]
+                session['admin_role'] = admin[4]
+                
+                # Update last login
+                cursor.execute("""
+                    UPDATE admin_users 
+                    SET last_login = CURRENT_TIMESTAMP 
+                    WHERE id = %s
+                """, (admin[0],))
+                conn.commit()
+                
+                # Log login action
+                log_admin_action(admin[0], 'LOGIN', f'User {username} logged in')
+                
+                flash(f"Welcome, {admin[3]}!", "success")
+                return redirect(url_for('admin_dashboard'))
+            else:
+                flash("Invalid password", "danger")
+        else:
+            flash("Invalid username or account inactive", "danger")
+
+        cursor.close()
+        conn.close()
+
+    return render_template("admin_login.html")
+
+@app.route('/admin/dashboard')
+def admin_dashboard():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    # Get statistics
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    stats = {}
+    try:
+        # User counts
+        cursor.execute("SELECT COUNT(*) FROM admin_users WHERE is_active = TRUE")
+        stats['admins_count'] = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM pharmacists WHERE is_active = TRUE")
+        stats['pharmacists_count'] = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM billing_users WHERE is_active = TRUE")
+        stats['cashiers_count'] = cursor.fetchone()[0]
+        
+        # Today's billing collection
+        today = date.today()
+        cursor.execute("""
+            SELECT COALESCE(SUM(amount_paid), 0) 
+            FROM payments 
+            WHERE DATE(payment_date) = %s
+        """, (today,))
+        stats['todays_collection'] = float(cursor.fetchone()[0] or 0)
+        
+        # Pharmacy stock alerts
+        cursor.execute("""
+            SELECT COUNT(*) FROM drugs 
+            WHERE stock_quantity <= low_stock_threshold 
+            AND expiry_date > CURRENT_DATE
+        """)
+        stats['low_stock_count'] = cursor.fetchone()[0]
+        
+        cursor.execute("""
+            SELECT COUNT(*) FROM drugs 
+            WHERE expiry_date < CURRENT_DATE AND stock_quantity > 0
+        """)
+        stats['expired_stock_count'] = cursor.fetchone()[0]
+        
+        # Recent pharmacy sales
+        cursor.execute("""
+            SELECT COUNT(*), COALESCE(SUM(grand_total), 0)
+            FROM receipts 
+            WHERE DATE(created_at) = %s
+        """, (today,))
+        result = cursor.fetchone()
+        stats['pharmacy_sales_count'] = result[0]
+        stats['pharmacy_revenue'] = float(result[1] or 0)
+        
+        # Recent admin actions
+        cursor.execute("""
+            SELECT a.username, l.action, l.created_at 
+            FROM admin_audit_logs l
+            JOIN admin_users a ON l.admin_id = a.id
+            ORDER BY l.created_at DESC 
+            LIMIT 10
+        """)
+        stats['recent_actions'] = cursor.fetchall()
+        
+    except Exception as e:
+        app.logger.error(f"Error fetching admin stats: {e}")
+        flash("Error loading dashboard statistics", "warning")
+        stats = {}
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template(
+        "admin_dashboard.html",
+        stats=stats,
+        hospital_name="All Saint Medical Center Nsukka, Enugu State",
+        admin_name=session.get('admin_full_name', 'Admin')
+    )
+
+@app.route('/admin/logout')
+def admin_logout():
+    if 'admin_id' in session:
+        log_admin_action(session['admin_id'], 'LOGOUT')
+    session.clear()
+    flash("Logged out successfully", "success")
+    return redirect(url_for('admin_login'))
+
+# ==================== ADMIN USER MANAGEMENT ====================
+
+@app.route('/admin/users/admins')
+def admin_manage_admins():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("""
+            SELECT id, username, full_name, email, role, 
+                   is_super_admin, is_active, created_at, last_login
+            FROM admin_users 
+            ORDER BY created_at DESC
+        """)
+        admins = cursor.fetchall()
+    except Exception as e:
+        app.logger.error(f"Error fetching admins: {e}")
+        admins = []
+        flash("Error loading admin users", "danger")
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template(
+        "admin_manage_admins.html",
+        admins=admins,
+        admin_name=session.get('admin_full_name', 'Admin')
+    )
+
+@app.route('/admin/users/create-admin', methods=['GET', 'POST'])
+def admin_create_admin():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        full_name = request.form['full_name']
+        email = request.form.get('email', '')
+        role = request.form.get('role', 'Admin')
+        
+        if not all([username, password, full_name]):
+            flash("Username, password, and full name are required", "danger")
+            return redirect(url_for('admin_create_admin'))
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # Check if username exists
+            cursor.execute("SELECT id FROM admin_users WHERE username = %s", (username,))
+            if cursor.fetchone():
+                flash("Username already exists", "danger")
+                return redirect(url_for('admin_create_admin'))
+            
+            hashed_pw = generate_password_hash(password)
+            cursor.execute("""
+                INSERT INTO admin_users (username, password, full_name, email, role, created_by)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (username, hashed_pw, full_name, email, role, session['admin_id']))
+            
+            conn.commit()
+            
+            # Log action
+            log_admin_action(session['admin_id'], 'CREATE_ADMIN', 
+                           f'Created admin account: {username} ({full_name})')
+            
+            flash(f"Admin account created for {full_name}", "success")
+            return redirect(url_for('admin_manage_admins'))
+            
+        except Exception as e:
+            conn.rollback()
+            app.logger.error(f"Error creating admin: {e}")
+            flash(f"Error creating admin account: {str(e)}", "danger")
+            
+        finally:
+            cursor.close()
+            conn.close()
+    
+    return render_template(
+        "admin_create_user.html",
+        user_type="admin",
+        admin_name=session.get('admin_full_name', 'Admin')
+    )
+
+@app.route('/admin/users/create-cashier', methods=['GET', 'POST'])
+def admin_create_cashier():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        full_name = request.form['full_name']
+        email = request.form.get('email', '')
+        
+        if not all([username, password, full_name]):
+            flash("Username, password, and full name are required", "danger")
+            return redirect(url_for('admin_create_cashier'))
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # Check if username exists in both cashier_users and billing_users
+            cursor.execute("SELECT id FROM cashier_users WHERE username = %s", (username,))
+            if cursor.fetchone():
+                flash("Username already exists in cashier users", "danger")
+                return redirect(url_for('admin_create_cashier'))
+            
+            cursor.execute("SELECT id FROM billing_users WHERE username = %s", (username,))
+            if cursor.fetchone():
+                flash("Username already exists in billing users", "danger")
+                return redirect(url_for('admin_create_cashier'))
+            
+            hashed_pw = generate_password_hash(password)
+            
+            # Create in cashier_users table
+            cursor.execute("""
+                INSERT INTO cashier_users (username, password, full_name, email, created_by)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (username, hashed_pw, full_name, email, session['admin_id']))
+            
+            # Also create in billing_users table for compatibility - handle missing created_by column
+            try:
+                cursor.execute("""
+                    INSERT INTO billing_users (username, password, full_name, created_by)
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT (username) DO NOTHING
+                """, (username, hashed_pw, full_name, session['admin_id']))
+            except Exception as e:
+                # If created_by column doesn't exist, insert without it
+                app.logger.warning(f"Could not insert into billing_users with created_by: {e}")
+                cursor.execute("""
+                    INSERT INTO billing_users (username, password, full_name)
+                    VALUES (%s, %s, %s)
+                    ON CONFLICT (username) DO NOTHING
+                """, (username, hashed_pw, full_name))
+            
+            conn.commit()
+            
+            # Log action
+            log_admin_action(session['admin_id'], 'CREATE_CASHIER', 
+                           f'Created cashier account: {username} ({full_name})')
+            
+            flash(f"Cashier account created for {full_name}", "success")
+            return redirect(url_for('admin_manage_cashiers'))
+            
+        except Exception as e:
+            conn.rollback()
+            app.logger.error(f"Error creating cashier: {e}")
+            flash(f"Error creating cashier account: {str(e)}", "danger")
+            
+        finally:
+            cursor.close()
+            conn.close()
+    
+    return render_template(
+        "admin_create_user.html",
+        user_type="cashier",
+        admin_name=session.get('admin_full_name', 'Admin')
+    )
+
+@app.route('/admin/users/create-pharmacist', methods=['GET', 'POST'])
+def admin_create_pharmacist():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        full_name = request.form['full_name']
+        
+        if not all([username, password, full_name]):
+            flash("Username, password, and full name are required", "danger")
+            return redirect(url_for('admin_create_pharmacist'))
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        try:
+            # Check if username exists
+            cursor.execute("SELECT id FROM pharmacists WHERE username = %s", (username,))
+            if cursor.fetchone():
+                flash("Username already exists", "danger")
+                return redirect(url_for('admin_create_pharmacist'))
+            
+            hashed_pw = generate_password_hash(password)
+            cursor.execute("""
+                INSERT INTO pharmacists (username, password, full_name, created_by)
+                VALUES (%s, %s, %s, %s)
+            """, (username, hashed_pw, full_name, session['admin_id']))
+            
+            conn.commit()
+            
+            # Log action
+            log_admin_action(session['admin_id'], 'CREATE_PHARMACIST', 
+                           f'Created pharmacist account: {username} ({full_name})')
+            
+            flash(f"Pharmacist account created for {full_name}", "success")
+            return redirect(url_for('admin_manage_pharmacists'))
+            
+        except Exception as e:
+            conn.rollback()
+            app.logger.error(f"Error creating pharmacist: {e}")
+            flash(f"Error creating pharmacist account: {str(e)}", "danger")
+            
+        finally:
+            cursor.close()
+            conn.close()
+    
+    return render_template(
+        "admin_create_user.html",
+        user_type="pharmacist",
+        admin_name=session.get('admin_full_name', 'Admin')
+    )
+
+@app.route('/admin/users/cashiers')
+def admin_manage_cashiers():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Just show existing billing_users
+        cursor.execute("""
+            SELECT id, username, username as full_name, 
+                   NULL as email, TRUE as is_active, 
+                   created_at, NULL as last_login
+            FROM billing_users 
+            ORDER BY created_at DESC
+        """)
+        cashiers = cursor.fetchall()
+    except Exception as e:
+        app.logger.error(f"Error fetching cashiers: {e}")
+        cashiers = []
+        flash("Error loading cashier users", "danger")
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template(
+        "admin_manage_cashiers.html",
+        cashiers=cashiers,
+        admin_name=session.get('admin_full_name', 'Admin')
+    )
+
+@app.route('/admin/users/pharmacists')
+def admin_manage_pharmacists():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Just show existing pharmacists
+        cursor.execute("""
+            SELECT id, username, username as full_name,
+                   is_active, created_at
+            FROM pharmacists 
+            ORDER BY created_at DESC
+        """)
+        pharmacists = cursor.fetchall()
+    except Exception as e:
+        app.logger.error(f"Error fetching pharmacists: {e}")
+        pharmacists = []
+        flash("Error loading pharmacist users", "danger")
+    
+    cursor.close()
+    conn.close()
+    
+    return render_template(
+        "admin_manage_pharmacists.html",
+        pharmacists=pharmacists,
+        admin_name=session.get('admin_full_name', 'Admin')
+    )
+    
+@app.route('/admin/users/toggle-status/<user_type>/<int:user_id>', methods=['POST'])
+def admin_toggle_user_status(user_type, user_id):
+    if 'admin_id' not in session:
+        return jsonify({"success": False, "message": "Unauthorized"}), 401
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        if user_type == 'admin':
+            table = 'admin_users'
+        elif user_type == 'cashier':
+            table = 'cashier_users'
+        elif user_type == 'pharmacist':
+            table = 'pharmacists'
+        else:
+            return jsonify({"success": False, "message": "Invalid user type"}), 400
+        
+        # Get current status
+        cursor.execute(f"SELECT is_active FROM {table} WHERE id = %s", (user_id,))
+        result = cursor.fetchone()
+        if not result:
+            return jsonify({"success": False, "message": "User not found"}), 404
+        
+        new_status = not result[0]
+        
+        # Update status
+        cursor.execute(f"UPDATE {table} SET is_active = %s WHERE id = %s", (new_status, user_id))
+        conn.commit()
+        
+        # Log action
+        status_text = "activated" if new_status else "deactivated"
+        log_admin_action(session['admin_id'], 'TOGGLE_USER_STATUS', 
+                       f'{status_text} {user_type} user ID: {user_id}')
+        
+        return jsonify({
+            "success": True, 
+            "message": f"User {status_text} successfully",
+            "new_status": new_status
+        })
+        
+    except Exception as e:
+        conn.rollback()
+        app.logger.error(f"Error toggling user status: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
+        
+    finally:
+        cursor.close()
+        conn.close()
+
+# ==================== PHARMACY REPORTS (Admin Access) ====================
+
+@app.route('/admin/reports/pharmacy-stock')
+def admin_pharmacy_stock():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    filter_type = request.args.get("filter", "all")
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        cur.execute("""
+            SELECT id, name, strength, stock_quantity, unit_price, 
+                   expiry_date, low_stock_threshold
+            FROM drugs
+            ORDER BY expiry_date ASC
+        """)
+        rows = cur.fetchall()
+        
+        # Build stock snapshot
+        stock = build_stock_snapshot(rows, date.today())
+        stock = apply_stock_filter(stock, filter_type)
+        
+        # Get summary stats
+        total_stock_value = sum(d["total_value"] for d in stock)
+        total_items = len(rows)
+        filtered_items = len(stock)
+        
+    except Exception as e:
+        app.logger.error(f"Error fetching pharmacy stock: {e}")
+        stock = []
+        total_stock_value = 0
+        total_items = 0
+        filtered_items = 0
+        flash("Error loading pharmacy stock report", "danger")
+    
+    cur.close()
+    conn.close()
+    
+    return render_template(
+        "admin_pharmacy_stock.html",
+        stock=stock,
+        current_filter=filter_type,
+        total_stock_value=total_stock_value,
+        total_items=total_items,
+        filtered_items=filtered_items,
+        admin_name=session.get('admin_full_name', 'Admin')
+    )
+
+@app.route('/admin/reports/pharmacy-revenue', methods=['GET', 'POST'])
+def admin_pharmacy_revenue():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    report_type = request.form.get("period", "daily")
+    selected_day = request.form.get("day")
+    selected_month = request.form.get("month")
+    selected_year = request.form.get("year")
+    today = date.today()
+    
+    if report_type == "daily":
+        start_date = end_date = datetime.strptime(selected_day, "%Y-%m-%d").date() if selected_day else today
+    elif report_type == "weekly":
+        d = datetime.strptime(selected_day, "%Y-%m-%d").date() if selected_day else today
+        start_date = d - timedelta(days=d.weekday())
+        end_date = start_date + timedelta(days=6)
+    elif report_type == "monthly":
+        month = int(selected_month) if selected_month else today.month
+        year = int(selected_year) if selected_year else today.year
+        start_date = date(year, month, 1)
+        if month == 12:
+            end_date = date(year + 1, 1, 1) - timedelta(days=1)
+        else:
+            end_date = date(year, month + 1, 1) - timedelta(days=1)
+    else:
+        flash("Invalid report period", "danger")
+        return redirect(url_for("admin_dashboard"))
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        # First, check if pharmacist column exists in receipts table
+        cur.execute("""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name='receipts' AND column_name='pharmacist'
+        """)
+        
+        has_pharmacist_column = cur.fetchone() is not None
+        
+        # Get pharmacy sales - adjust query based on available columns
+        if has_pharmacist_column:
+            cur.execute("""
+                SELECT r.id, r.patient_name, r.patient_id, r.grand_total, 
+                       r.created_at, r.pharmacist
+                FROM receipts r
+                WHERE DATE(r.created_at) BETWEEN %s AND %s
+                ORDER BY r.created_at DESC
+            """, (start_date, end_date))
+        else:
+            cur.execute("""
+                SELECT r.id, r.patient_name, r.patient_id, r.grand_total, 
+                       r.created_at, 'System' as pharmacist
+                FROM receipts r
+                WHERE DATE(r.created_at) BETWEEN %s AND %s
+                ORDER BY r.created_at DESC
+            """, (start_date, end_date))
+        
+        sales = cur.fetchall()
+        
+        # Get summary statistics
+        cur.execute("""
+            SELECT 
+                COUNT(*) as transactions,
+                COALESCE(SUM(grand_total), 0) as total_revenue,
+                AVG(grand_total) as avg_transaction,
+                MIN(grand_total) as min_transaction,
+                MAX(grand_total) as max_transaction
+            FROM receipts
+            WHERE DATE(created_at) BETWEEN %s AND %s
+        """, (start_date, end_date))
+        
+        stats = cur.fetchone()
+        total_revenue = float(stats[1]) if stats[1] else 0.0
+        avg_transaction = float(stats[2]) if stats[2] else 0.0
+        
+        # Get top selling drugs
+        cur.execute("""
+            SELECT 
+                ri.drug_name,
+                ri.strength,
+                SUM(ri.quantity) as total_quantity,
+                SUM(ri.quantity * ri.unit_price) as total_value
+            FROM receipt_items ri
+            JOIN receipts r ON ri.receipt_id = r.id
+            WHERE DATE(r.created_at) BETWEEN %s AND %s
+            GROUP BY ri.drug_name, ri.strength
+            ORDER BY total_value DESC
+            LIMIT 10
+        """, (start_date, end_date))
+        
+        top_drugs = cur.fetchall()
+        
+    except Exception as e:
+        app.logger.error(f"Error fetching pharmacy revenue: {e}")
+        sales = []
+        total_revenue = 0
+        avg_transaction = 0
+        top_drugs = []
+        flash("Error loading pharmacy revenue report", "danger")
+    
+    cur.close()
+    conn.close()
+    
+    months = [(i, month_name[i]) for i in range(1, 13)]
+    years = range(2024, today.year + 1)
+    
+    return render_template(
+        "admin_pharmacy_revenue.html",
+        sales=sales,
+        total_revenue=total_revenue,
+        avg_transaction=avg_transaction,
+        top_drugs=top_drugs,
+        period=report_type,
+        start_date=start_date,
+        end_date=end_date,
+        selected_day=selected_day,
+        selected_month=int(selected_month) if selected_month else today.month,
+        selected_year=int(selected_year) if selected_year else today.year,
+        months=months,
+        years=years,
+        today_str=today.strftime("%Y-%m-%d"),
+        admin_name=session.get('admin_full_name', 'Admin')
+    )
+        
+# ==================== BILLING REPORTS (Admin Access) ====================
+
+@app.route('/admin/reports/billing-payments')
+def admin_billing_payments():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    # Get filter parameters
+    patient_name = request.args.get("patient_name", "").strip()
+    service_type = request.args.get("service_type", "")
+    payment_method = request.args.get("payment_method", "")
+    status = request.args.get("status", "")
+    start_date = request.args.get("start_date")
+    end_date = request.args.get("end_date")
+    
+    # Create current_filters dict
+    current_filters = {
+        'patient_name': patient_name,
+        'service_type': service_type,
+        'payment_method': payment_method,
+        'status': status,
+        'start_date': start_date,
+        'end_date': end_date
+    }
+    
+    # Pagination
+    page = request.args.get("page", 1, type=int)
+    per_page = 20
+    
+    # Build query
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        # Base query
+        query = """
+            SELECT p.*, bu.username as cashier_name
+            FROM payments p
+            LEFT JOIN billing_users bu ON p.recorded_by = bu.id
+            WHERE 1=1
+        """
+        count_query = "SELECT COUNT(*) FROM payments WHERE 1=1"
+        params = []
+        
+        # Apply filters
+        if patient_name:
+            query += " AND LOWER(p.patient_name) LIKE LOWER(%s)"
+            count_query += " AND LOWER(patient_name) LIKE LOWER(%s)"
+            params.append(f"%{patient_name}%")
+        
+        if service_type:
+            query += " AND p.service_type = %s"
+            count_query += " AND service_type = %s"
+            params.append(service_type)
+        
+        if payment_method:
+            query += " AND p.payment_method = %s"
+            count_query += " AND payment_method = %s"
+            params.append(payment_method)
+        
+        if status:
+            query += " AND p.status = %s"
+            count_query += " AND status = %s"
+            params.append(status)
+        
+        if start_date:
+            query += " AND p.payment_date >= %s"
+            count_query += " AND payment_date >= %s"
+            params.append(start_date)
+        
+        if end_date:
+            query += " AND p.payment_date <= %s"
+            count_query += " AND payment_date <= %s"
+            params.append(end_date)
+        
+        # Get total count
+        cur.execute(count_query, params)
+        total_items = cur.fetchone()[0]
+        
+        # Apply ordering and pagination
+        query += " ORDER BY p.created_at DESC LIMIT %s OFFSET %s"
+        offset = (page - 1) * per_page
+        params.extend([per_page, offset])
+        
+        # Execute main query
+        cur.execute(query, params)
+        payments = cur.fetchall()
+        
+        # Get unique service types for dropdown
+        cur.execute("SELECT DISTINCT service_type FROM payments WHERE service_type IS NOT NULL ORDER BY service_type")
+        service_types = [row[0] for row in cur.fetchall()]
+        
+        # Calculate total amount
+        total_amount = 0
+        formatted_payments = []
+        for payment in payments:
+            payment_dict = {
+                "id": payment[0],
+                "patient_name": payment[1],
+                "service_type": payment[2],
+                "subtotal": float(payment[3]),
+                "discount": float(payment[4]),
+                "tax": float(payment[5]),
+                "grand_total": float(payment[6]),
+                "amount_paid": float(payment[7]),
+                "balance": float(payment[8]),
+                "payment_method": payment[9],
+                "status": payment[10],
+                "payment_date": payment[11],
+                "created_at": payment[13],
+                "cashier_name": payment[14]
+            }
+            formatted_payments.append(payment_dict)
+            total_amount += payment_dict["amount_paid"]
+        
+        # Get summary statistics - Simplified version
+        stats_query = """
+            SELECT 
+                COUNT(*) as total_transactions,
+                COALESCE(SUM(amount_paid), 0) as total_collected,
+                COALESCE(AVG(amount_paid), 0) as avg_payment,
+                COUNT(DISTINCT payment_method) as payment_methods_count,
+                COUNT(CASE WHEN status = 'Paid' THEN 1 END) as paid_count,
+                COUNT(CASE WHEN status = 'Partial' THEN 1 END) as partial_count
+            FROM payments
+            WHERE 1=1
+        """
+        stats_params = []
+        
+        if patient_name:
+            stats_query += " AND LOWER(patient_name) LIKE LOWER(%s)"
+            stats_params.append(f"%{patient_name}%")
+        
+        if service_type:
+            stats_query += " AND service_type = %s"
+            stats_params.append(service_type)
+        
+        if payment_method:
+            stats_query += " AND payment_method = %s"
+            stats_params.append(payment_method)
+        
+        if status:
+            stats_query += " AND status = %s"
+            stats_params.append(status)
+        
+        if start_date:
+            stats_query += " AND payment_date >= %s"
+            stats_params.append(start_date)
+        
+        if end_date:
+            stats_query += " AND payment_date <= %s"
+            stats_params.append(end_date)
+        
+        cur.execute(stats_query, stats_params)
+        stats_row = cur.fetchone()
+        
+        if stats_row:
+            stats = {
+                'total_transactions': stats_row[0],
+                'total_collected': float(stats_row[1]) if stats_row[1] else 0.0,
+                'avg_payment': float(stats_row[2]) if stats_row[2] else 0.0,
+                'payment_methods_count': stats_row[3],
+                'paid_count': stats_row[4],
+                'partial_count': stats_row[5]
+            }
+        else:
+            stats = {
+                'total_transactions': 0,
+                'total_collected': 0.0,
+                'avg_payment': 0.0,
+                'payment_methods_count': 0,
+                'paid_count': 0,
+                'partial_count': 0
+            }
+        
+    except Exception as e:
+        app.logger.error(f"Error fetching billing payments: {e}")
+        payments = []
+        formatted_payments = []
+        service_types = []
+        total_items = 0
+        total_amount = 0
+        stats = {
+            'total_transactions': 0,
+            'total_collected': 0.0,
+            'avg_payment': 0.0,
+            'payment_methods_count': 0,
+            'paid_count': 0,
+            'partial_count': 0
+        }
+        flash("Error loading billing payments report", "danger")
+    
+    cur.close()
+    conn.close()
+    
+    # Calculate pagination
+    total_pages = (total_items + per_page - 1) // per_page
+    
+    return render_template(
+        "admin_billing_payments.html",
+        payments=formatted_payments,
+        service_types=service_types,
+        total_items=total_items,
+        total_amount=total_amount,
+        stats=stats,
+        page=page,
+        total_pages=total_pages,
+        current_filters=current_filters,  # Add this line
+        admin_name=session.get('admin_full_name', 'Admin')
+    )
+@app.route('/admin/reports/todays-collection')
+def admin_todays_collection():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    today = date.today()
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        # Get today's payments
+        cur.execute("""
+            SELECT p.*, bu.username as cashier_name
+            FROM payments p
+            LEFT JOIN billing_users bu ON p.recorded_by = bu.id
+            WHERE DATE(p.payment_date) = %s
+            ORDER BY p.created_at DESC
+        """, (today,))
+        
+        today_payments = cur.fetchall()
+        
+        # Calculate totals by payment method - CONVERT TO FLOAT
+        payment_methods_data = {
+            'Cash': {'amount': 0.0, 'count': 0},
+            'Card': {'amount': 0.0, 'count': 0},
+            'Transfer': {'amount': 0.0, 'count': 0},
+            'POS': {'amount': 0.0, 'count': 0},
+            'Insurance': {'amount': 0.0, 'count': 0},
+            'Other': {'amount': 0.0, 'count': 0}
+        }
+        
+        # Process payments - CONVERT TO FLOAT
+        total_transactions = len(today_payments)
+        grand_total = 0.0
+        amounts = []
+        
+        recent_transactions = []
+        for payment in today_payments:
+            amount_paid = float(payment[7])  # Convert to float
+            payment_method = payment[9]
+            
+            # Add to grand total
+            grand_total += amount_paid
+            amounts.append(amount_paid)
+            
+            # Add to payment method totals
+            if payment_method in payment_methods_data:
+                payment_methods_data[payment_method]['amount'] += amount_paid
+                payment_methods_data[payment_method]['count'] += 1
+            else:
+                payment_methods_data['Other']['amount'] += amount_paid
+                payment_methods_data['Other']['count'] += 1
+            
+            # Prepare recent transactions data - CONVERT TO FLOAT
+            recent_transactions.append({
+                'id': payment[0],
+                'patient_name': payment[1],
+                'service_type': payment[2],
+                'amount_paid': amount_paid,  # Already float
+                'payment_method': payment_method,
+                'status': payment[10],
+                'created_at': payment[13],
+                'cashier_name': payment[14]
+            })
+        
+        # Calculate additional statistics - CONVERT TO FLOAT
+        average_transaction = grand_total / total_transactions if total_transactions > 0 else 0.0
+        highest_transaction = max(amounts) if amounts else 0.0
+        lowest_transaction = min(amounts) if amounts else 0.0
+        
+        # Calculate totals for time periods - CONVERT TO FLOAT
+        morning_total = 0.0  # 6AM - 12PM
+        afternoon_total = 0.0  # 12PM - 4PM
+        evening_total = 0.0  # 4PM - 10PM
+        
+        for payment in today_payments:
+            created_at = payment[13]
+            if created_at:
+                hour = created_at.hour
+                amount = float(payment[7])  # Convert to float
+                
+                if 6 <= hour < 12:
+                    morning_total += amount
+                elif 12 <= hour < 16:
+                    afternoon_total += amount
+                elif 16 <= hour < 22:
+                    evening_total += amount
+        
+        # Prepare payment methods for template - CONVERT TO FLOAT
+        payment_methods = []
+        for method_name, data in payment_methods_data.items():
+            if data['count'] > 0:  # Only include methods with transactions
+                percentage = (data['amount'] / grand_total * 100) if grand_total > 0 else 0
+                payment_methods.append({
+                    'name': method_name,
+                    'amount': data['amount'],  # Already float
+                    'count': data['count'],
+                    'percentage': round(percentage, 1)
+                })
+        
+        # Get department-wise collection - CONVERT TO FLOAT
+        cur.execute("""
+            SELECT 
+                p.service_type,
+                COUNT(*) as transaction_count,
+                SUM(p.amount_paid) as total_amount
+            FROM payments p
+            WHERE DATE(p.payment_date) = %s
+            GROUP BY p.service_type
+            ORDER BY total_amount DESC
+        """, (today,))
+        
+        service_type_rows = cur.fetchall()
+        service_type_data = []
+        for row in service_type_rows:
+            service_type_data.append({
+                'service_type': row[0],
+                'transaction_count': row[1],
+                'total_amount': float(row[2]) if row[2] else 0.0  # Convert to float
+            })
+        
+        # Calculate progress percentage
+        daily_target = 500000.00
+        if daily_target > 0:
+            progress_percentage = min(100, (grand_total / daily_target * 100))
+        else:
+            progress_percentage = 0
+        
+    except Exception as e:
+        app.logger.error(f"Error fetching today's collection: {e}")
+        today_payments = []
+        recent_transactions = []
+        total_transactions = 0
+        grand_total = 0.0
+        average_transaction = 0.0
+        highest_transaction = 0.0
+        lowest_transaction = 0.0
+        morning_total = afternoon_total = evening_total = 0.0
+        payment_methods = []
+        service_type_data = []
+        progress_percentage = 0
+        flash("Error loading today's collection report", "danger")
+    
+    cur.close()
+    conn.close()
+    
+    # Format date for display
+    today_date = today.strftime("%A, %B %d, %Y")
+    
+    return render_template(
+        "admin_todays_collection.html",
+        today_date=today_date,
+        current_time=datetime.now().strftime("%H:%M:%S"),
+        grand_total=grand_total,
+        cash_total=payment_methods_data['Cash']['amount'],
+        card_total=payment_methods_data['Card']['amount'],
+        transfer_total=payment_methods_data['Transfer']['amount'],
+        pos_total=payment_methods_data['POS']['amount'],
+        insurance_total=payment_methods_data['Insurance']['amount'],
+        other_total=payment_methods_data['Other']['amount'],
+        payment_methods=payment_methods,
+        recent_transactions=recent_transactions,
+        total_transactions=total_transactions,
+        average_transaction=average_transaction,
+        highest_transaction=highest_transaction,
+        lowest_transaction=lowest_transaction,
+        morning_total=morning_total,
+        afternoon_total=afternoon_total,
+        evening_total=evening_total,
+        service_type_data=service_type_data,
+        admin_name=session.get('admin_full_name', 'Admin'),
+        daily_target=daily_target,
+        progress_percentage=progress_percentage  # Add this for the template
+    )
+    
+def sync_existing_users():
+    """Sync existing users from billing_users and pharmacists to new tables."""
+    conn = get_db_connection()
+    if not conn:
+        return
+    
+    cursor = conn.cursor()
+    
+    try:
+        # First, add missing columns if they don't exist
+        # Add full_name column to billing_users if it doesn't exist
+        try:
+            cursor.execute("ALTER TABLE billing_users ADD COLUMN IF NOT EXISTS full_name VARCHAR(100);")
+        except Exception as e:
+            app.logger.warning(f"Could not add full_name to billing_users: {e}")
+        
+        # Sync existing billing users to cashier_users
+        cursor.execute("""
+            INSERT INTO cashier_users (username, password, full_name, created_at)
+            SELECT bu.username, bu.password, 
+                   COALESCE(bu.full_name, bu.username) as full_name, 
+                   bu.created_at
+            FROM billing_users bu
+            WHERE NOT EXISTS (
+                SELECT 1 FROM cashier_users cu WHERE cu.username = bu.username
+            )
+            ON CONFLICT (username) DO NOTHING
+        """)
+        
+        # Sync existing pharmacists (ensure they have full_name field)
+        cursor.execute("""
+            UPDATE pharmacists 
+            SET full_name = username 
+            WHERE full_name IS NULL
+        """)
+        
+        conn.commit()
+        app.logger.info("Successfully synced existing users to new tables")
+        
+    except Exception as e:
+        conn.rollback()
+        app.logger.error(f"Error syncing existing users: {e}")
+    
+    finally:
+        cursor.close()
+        conn.close()
+        
+# ==================== ADMIN EXPORT ROUTES ====================
+
+@app.route('/admin/reports/export/pharmacy-stock')
+def admin_export_pharmacy_stock():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    filter_type = request.args.get("filter", "all")
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        cur.execute("""
+            SELECT id, name, strength, stock_quantity, unit_price, 
+                   expiry_date, low_stock_threshold
+            FROM drugs
+            ORDER BY expiry_date ASC
+        """)
+        rows = cur.fetchall()
+        
+        stock = build_stock_snapshot(rows, date.today())
+        stock = apply_stock_filter(stock, filter_type)
+        
+        # Create Excel workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = f"Pharmacy Stock - {filter_type}"
+        
+        # Add headers
+        headers = [
+            "Drug Name", "Strength", "Quantity", "Unit Price (₦)",
+            "Expiry Date", "Days Left", "Status", "Total Value (₦)", "Low Stock Threshold"
+        ]
+        ws.append(headers)
+        
+        # Style headers
+        from openpyxl.styles import Font, PatternFill
+        for c in range(1, len(headers) + 1):
+            ws.cell(row=1, column=c).font = Font(bold=True)
+        
+        fills = {
+            "EXPIRED": PatternFill("solid", fgColor="FF9999"),
+            "EXPIRING_SOON": PatternFill("solid", fgColor="FFFF99"),
+            "LOW": PatternFill("solid", fgColor="ADD8E6")
+        }
+        
+        for item in stock:
+            ws.append([
+                item["name"], item["strength"], item["quantity"],
+                float(item["unit_price"]), item["expiry_date"],
+                item["days_left"], item["status"],
+                float(item["total_value"]), item["low_stock_threshold"]
+            ])
+            
+            row_idx = ws.max_row
+            if item["status"] in fills:
+                for col in range(1, len(headers) + 1):
+                    ws.cell(row=row_idx, column=col).fill = fills[item["status"]]
+            elif item["quantity"] <= item["low_stock_threshold"]:
+                for col in range(1, len(headers) + 1):
+                    ws.cell(row=row_idx, column=col).fill = fills["LOW"]
+        
+        # Add summary
+        ws.append([])
+        ws.append(["SUMMARY"])
+        ws.append(["Total Items:", len(stock)])
+        ws.append(["Total Stock Value:", f"₦{sum(d['total_value'] for d in stock):,.2f}"])
+        ws.append(["Expired Items:", sum(1 for d in stock if d["status"] == "EXPIRED")])
+        ws.append(["Expiring Soon:", sum(1 for d in stock if d["status"] == "EXPIRING_SOON")])
+        ws.append(["Low Stock:", sum(1 for d in stock if d["quantity"] <= d["low_stock_threshold"])])
+        
+        stream = io.BytesIO()
+        wb.save(stream)
+        stream.seek(0)
+        
+        # Log action
+        log_admin_action(session['admin_id'], 'EXPORT_REPORT', 
+                       f'Exported pharmacy stock report (filter: {filter_type})')
+        
+        return send_file(
+            stream,
+            as_attachment=True,
+            download_name=f"admin_pharmacy_stock_{date.today()}_{filter_type}.xlsx",
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+    except Exception as e:
+        app.logger.error(f"Error exporting pharmacy stock: {e}")
+        flash("Error exporting report", "danger")
+        return redirect(url_for('admin_pharmacy_stock'))
+        
+    finally:
+        cur.close()
+        conn.close()
+
+@app.route('/admin/reports/export/billing-payments')
+def admin_export_billing_payments():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    # Get filter parameters
+    patient_name = request.args.get("patient_name", "").strip()
+    service_type = request.args.get("service_type", "")
+    payment_method = request.args.get("payment_method", "")
+    status = request.args.get("status", "")
+    start_date = request.args.get("start_date")
+    end_date = request.args.get("end_date")
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        # Build query
+        query = """
+            SELECT p.*, bu.username as cashier_name
+            FROM payments p
+            LEFT JOIN billing_users bu ON p.recorded_by = bu.id
+            WHERE 1=1
+        """
+        params = []
+        
+        if patient_name:
+            query += " AND LOWER(p.patient_name) LIKE LOWER(%s)"
+            params.append(f"%{patient_name}%")
+        
+        if service_type:
+            query += " AND p.service_type = %s"
+            params.append(service_type)
+        
+        if payment_method:
+            query += " AND p.payment_method = %s"
+            params.append(payment_method)
+        
+        if status:
+            query += " AND p.status = %s"
+            params.append(status)
+        
+        if start_date:
+            query += " AND p.payment_date >= %s"
+            params.append(start_date)
+        
+        if end_date:
+            query += " AND p.payment_date <= %s"
+            params.append(end_date)
+        
+        query += " ORDER BY p.created_at DESC"
+        cur.execute(query, params)
+        payments = cur.fetchall()
+        
+        # Create Excel workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Billing Payments"
+        
+        # Add title
+        ws.append(["Billing Payments Report"])
+        ws.append([f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"])
+        ws.append([])
+        
+        # Add headers
+        headers = [
+            "Receipt No", "Patient Name", "Service Type", 
+            "Subtotal (₦)", "Discount (₦)", "Tax (₦)", "Grand Total (₦)",
+            "Amount Paid (₦)", "Balance (₦)", "Payment Method",
+            "Status", "Payment Date", "Created At", "Cashier"
+        ]
+        ws.append(headers)
+        
+        # Style headers
+        from openpyxl.styles import Font, PatternFill, Alignment
+        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+        header_font = Font(color="FFFFFF", bold=True)
+        
+        for cell in ws[4]:  # Headers are on row 4
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center")
+        
+        # Add data rows
+        for payment in payments:
+            ws.append([
+                payment[0],  # id
+                payment[1],  # patient_name
+                payment[2],  # service_type
+                float(payment[3]),  # subtotal
+                float(payment[4]),  # discount
+                float(payment[5]),  # tax
+                float(payment[6]),  # grand_total
+                float(payment[7]),  # amount_paid
+                float(payment[8]),  # balance
+                payment[9],  # payment_method
+                payment[10],  # status
+                payment[11],  # payment_date
+                payment[13],  # created_at
+                payment[14]   # cashier_name
+            ])
+        
+        # Auto-adjust column widths
+        for column in ws.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 30)
+            ws.column_dimensions[column_letter].width = adjusted_width
+        
+        # Add summary
+        total_amount = sum(float(p[7]) for p in payments) if payments else 0
+        total_balance = sum(float(p[8]) for p in payments) if payments else 0
+        
+        ws.append([])
+        ws.append(["SUMMARY"])
+        ws.append(["Total Transactions:", len(payments)])
+        ws.append(["Total Amount Collected:", total_amount])
+        ws.append(["Total Outstanding Balance:", total_balance])
+        
+        stream = io.BytesIO()
+        wb.save(stream)
+        stream.seek(0)
+        
+        # Log action
+        log_admin_action(session['admin_id'], 'EXPORT_REPORT', 
+                       f'Exported billing payments report')
+        
+        return send_file(
+            stream,
+            as_attachment=True,
+            download_name=f"admin_billing_payments_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+    except Exception as e:
+        app.logger.error(f"Error exporting billing payments: {e}")
+        flash("Error exporting report", "danger")
+        return redirect(url_for('admin_billing_payments'))
+        
+    finally:
+        cur.close()
+        conn.close()
+
+@app.route('/admin/reports/export/todays-collection')
+def admin_export_todays_collection():
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    today = date.today()
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        # Get today's payments
+        cur.execute("""
+            SELECT p.*, bu.username as cashier_name
+            FROM payments p
+            LEFT JOIN billing_users bu ON p.recorded_by = bu.id
+            WHERE DATE(p.payment_date) = %s
+            ORDER BY p.created_at DESC
+        """, (today,))
+        
+        today_payments = cur.fetchall()
+        
+        # Create Excel workbook
+        wb = Workbook()
+        ws = wb.active
+        ws.title = f"Today's Collection - {today}"
+        
+        # Add title
+        ws.append([f"Today's Collection Report - {today.strftime('%B %d, %Y')}"])
+        ws.append([f"Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"])
+        ws.append([])
+        
+        # Summary section
+        ws.append(["SUMMARY"])
+        ws.append([])
+        
+        # Calculate totals
+        grand_total = sum(float(p[7]) for p in today_payments) if today_payments else 0
+        total_transactions = len(today_payments)
+        
+        # Summary statistics
+        ws.append(["Date:", today.strftime('%A, %B %d, %Y')])
+        ws.append(["Total Transactions:", total_transactions])
+        ws.append(["Grand Total:", grand_total])
+        ws.append([])
+        
+        # Payment method breakdown
+        payment_methods_data = {
+            'Cash': {'amount': 0, 'count': 0},
+            'Card': {'amount': 0, 'count': 0},
+            'Transfer': {'amount': 0, 'count': 0},
+            'POS': {'amount': 0, 'count': 0},
+            'Insurance': {'amount': 0, 'count': 0},
+            'Other': {'amount': 0, 'count': 0}
+        }
+        
+        for payment in today_payments:
+            amount_paid = float(payment[7])
+            payment_method = payment[9]
+            
+            if payment_method in payment_methods_data:
+                payment_methods_data[payment_method]['amount'] += amount_paid
+                payment_methods_data[payment_method]['count'] += 1
+            else:
+                payment_methods_data['Other']['amount'] += amount_paid
+                payment_methods_data['Other']['count'] += 1
+        
+        ws.append(["Payment Method Breakdown"])
+        ws.append(["Method", "Count", "Amount", "Percentage"])
+        
+        for method_name, data in payment_methods_data.items():
+            if data['count'] > 0:
+                percentage = (data['amount'] / grand_total * 100) if grand_total > 0 else 0
+                ws.append([
+                    method_name,
+                    data['count'],
+                    data['amount'],
+                    f"{percentage:.1f}%"
+                ])
+        
+        ws.append([])
+        ws.append([])
+        
+        # Detailed transactions
+        ws.append(["DETAILED TRANSACTIONS"])
+        ws.append([])
+        
+        headers = [
+            "Receipt No", "Patient Name", "Service Type", 
+            "Subtotal", "Discount", "Tax", "Grand Total",
+            "Amount Paid", "Balance", "Payment Method",
+            "Status", "Payment Date", "Time", "Cashier"
+        ]
+        ws.append(headers)
+        
+        # Style headers
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+        header_font = Font(color="FFFFFF", bold=True)
+        border = Border(left=Side(style='thin'), 
+                       right=Side(style='thin'), 
+                       top=Side(style='thin'), 
+                       bottom=Side(style='thin'))
+        
+        for cell in ws[ws.max_row]:
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center")
+            cell.border = border
+        
+        # Add data rows
+        for payment in today_payments:
+            ws.append([
+                payment[0],  # id
+                payment[1],  # patient_name
+                payment[2],  # service_type
+                float(payment[3]),  # subtotal
+                float(payment[4]),  # discount
+                float(payment[5]),  # tax
+                float(payment[6]),  # grand_total
+                float(payment[7]),  # amount_paid
+                float(payment[8]),  # balance
+                payment[9],  # payment_method
+                payment[10],  # status
+                payment[11].strftime('%Y-%m-%d'),  # payment_date
+                payment[13].strftime('%H:%M:%S') if payment[13] else '',  # created_at time
+                payment[14]   # cashier_name
+            ])
+        
+        # Apply borders to data rows
+        data_start_row = ws.max_row - len(today_payments) + 1
+        for row in ws.iter_rows(min_row=data_start_row, max_row=ws.max_row):
+            for cell in row:
+                cell.border = border
+        
+        # Auto-adjust column widths
+        for column in ws.columns:
+            max_length = 0
+            column_letter = column[0].column_letter
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 30)
+            ws.column_dimensions[column_letter].width = adjusted_width
+        
+        cur.close()
+        conn.close()
+        
+        # Save to BytesIO
+        stream = io.BytesIO()
+        wb.save(stream)
+        stream.seek(0)
+        
+        # Log action
+        log_admin_action(session['admin_id'], 'EXPORT_REPORT', 
+                       f'Exported today\'s collection report')
+        
+        return send_file(
+            stream,
+            as_attachment=True,
+            download_name=f"todays_collection_{today.strftime('%Y%m%d')}.xlsx",
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        
+    except Exception as e:
+        app.logger.error(f"Error exporting today's collection: {e}")
+        flash("Error exporting report", "danger")
+        return redirect(url_for('admin_todays_collection'))
+    
+def add_missing_columns():
+    """Add missing columns to existing tables."""
+    conn = get_db_connection()
+    if not conn:
+        return
+    
+    cursor = conn.cursor()
+    
+    try:
+        # Add full_name to billing_users if it doesn't exist
+        cursor.execute("""
+            DO $$ 
+            BEGIN
+                BEGIN
+                    ALTER TABLE billing_users ADD COLUMN full_name VARCHAR(100);
+                EXCEPTION
+                    WHEN duplicate_column THEN 
+                        -- Column already exists, do nothing
+                        NULL;
+                END;
+                
+                BEGIN
+                    ALTER TABLE receipts ADD COLUMN pharmacist VARCHAR(50);
+                EXCEPTION
+                    WHEN duplicate_column THEN 
+                        -- Column already exists, do nothing
+                        NULL;
+                END;
+            END $$;
+        """)
+        
+        # Update existing records
+        cursor.execute("UPDATE billing_users SET full_name = username WHERE full_name IS NULL;")
+        
+        conn.commit()
+        app.logger.info("Added missing columns to tables")
+        
+    except Exception as e:
+        conn.rollback()
+        app.logger.error(f"Error adding missing columns: {e}")
+    
+    finally:
+        cursor.close()
+        conn.close()
+@app.route('/admin/drugs/delete-expired', methods=['POST'])
+def admin_delete_expired_drugs():
+    """Delete all expired drugs from the database."""
+    if 'admin_id' not in session:
+        return redirect(url_for('admin_login'))
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # First, get list of expired drugs for logging
+        cursor.execute("""
+            SELECT id, name, strength, stock_quantity 
+            FROM drugs 
+            WHERE expiry_date < CURRENT_DATE AND stock_quantity > 0
+        """)
+        
+        expired_drugs = cursor.fetchall()
+        
+        if not expired_drugs:
+            flash("No expired drugs found to delete.", "info")
+            return redirect(url_for('admin_pharmacy_stock'))
+        
+        # Log what will be deleted
+        drug_names = [f"{d[1]} {d[2]} (Qty: {d[3]})" for d in expired_drugs]
+        
+        # Delete expired drugs
+        cursor.execute("DELETE FROM drugs WHERE expiry_date < CURRENT_DATE")
+        
+        conn.commit()
+        
+        # Log the action
+        log_admin_action(
+            session['admin_id'], 
+            'DELETE_EXPIRED_DRUGS', 
+            f'Removed {len(expired_drugs)} expired drugs: {", ".join(drug_names)}'
+        )
+        
+        flash(f"Successfully removed {len(expired_drugs)} expired drug(s) from database.", "success")
+        
+    except Exception as e:
+        conn.rollback()
+        app.logger.error(f"Error deleting expired drugs: {e}")
+        flash(f"Error deleting expired drugs: {str(e)}", "danger")
+    
+    finally:
+        cursor.close()
+        conn.close()
+    
+    return redirect(url_for('admin_pharmacy_stock'))
+
+def add_missing_columns():
+    """Add missing columns to existing tables."""
+    conn = get_db_connection()
+    if not conn:
+        return
+    
+    cursor = conn.cursor()
+    
+    try:
+        # Add created_by to billing_users if it doesn't exist
+        cursor.execute("""
+            DO $$ 
+            BEGIN
+                BEGIN
+                    ALTER TABLE billing_users ADD COLUMN created_by INTEGER;
+                EXCEPTION
+                    WHEN duplicate_column THEN 
+                        NULL;
+                END;
+                
+                BEGIN
+                    ALTER TABLE pharmacists ADD COLUMN created_by INTEGER;
+                EXCEPTION
+                    WHEN duplicate_column THEN 
+                        NULL;
+                END;
+                
+                BEGIN
+                    ALTER TABLE pharmacists ADD COLUMN full_name VARCHAR(100);
+                EXCEPTION
+                    WHEN duplicate_column THEN 
+                        NULL;
+                END;
+                
+                BEGIN
+                    ALTER TABLE billing_users ADD COLUMN full_name VARCHAR(100);
+                EXCEPTION
+                    WHEN duplicate_column THEN 
+                        NULL;
+                END;
+            END $$;
+        """)
+        
+        # Update existing records with default values
+        cursor.execute("""
+            UPDATE billing_users 
+            SET created_by = 1 
+            WHERE created_by IS NULL 
+            AND EXISTS (SELECT 1 FROM admin_users WHERE id = 1)
+        """)
+        
+        cursor.execute("""
+            UPDATE pharmacists 
+            SET created_by = 1 
+            WHERE created_by IS NULL 
+            AND EXISTS (SELECT 1 FROM admin_users WHERE id = 1)
+        """)
+        
+        cursor.execute("UPDATE pharmacists SET full_name = username WHERE full_name IS NULL;")
+        cursor.execute("UPDATE billing_users SET full_name = username WHERE full_name IS NULL;")
+        
+        conn.commit()
+        app.logger.info("Added missing columns to tables")
+        
+    except Exception as e:
+        conn.rollback()
+        app.logger.error(f"Error adding missing columns: {e}")
+    
+    finally:
+        cursor.close()
+        conn.close()
+        
+        
+# # Update your main function to include this:
+# if __name__ == "__main__":
+#     create_tables()
+#     create_default_users()
+#     create_hr_tables()
+#     create_default_admin()
+#     add_missing_columns()  # Add this before sync_existing_users
+#     sync_existing_users()
+#     app.run(debug=True)
+
+
+
 if __name__ == "__main__":
-    create_tables()  # Your existing tables
-    create_default_users()  # Your existing default users
+    create_tables()
+    create_default_users()
+    create_hr_tables()
+    create_default_admin()
+    add_missing_columns()  # Call this BEFORE sync_existing_users
+    sync_existing_users()
     app.run(debug=True)
