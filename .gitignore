@@ -17,11 +17,7 @@ venv.bak/
 *.swo
 *~
 
-# Database
-*.db
-*.sqlite3
-*.dump
-*.backup
+
 
 # Environment variables
 .env
